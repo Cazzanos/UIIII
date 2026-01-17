@@ -1,13 +1,11 @@
 --[[
-    BSMT UI Library v4.3 - Professional Edition
-    Fixed dropdown blank list, redesigned buttons, and working config system
+    BSMT UI Library v4.5 - Enhanced & Fixed
+    Fixed dropdown issues, improved buttons, working config system
     Features:
-    - ZERO errors - completely bug-free
-    - Fixed dropdown blank list issue
-    - Professional button design without weird animations
-    - Fully working config system with proper flag management
-    - Enhanced notification animations
-    - Modern design with smooth animations
+    - Fixed dropdown blank list and selection bugs
+    - Enhanced button design without weird animations
+    - Fully working config system with all features
+    - All original functionality restored and enhanced
 ]]
 
 local Library = {}
@@ -15,7 +13,7 @@ Library.Windows = {}
 Library.Flags = {}
 Library.ConfigFolder = "BSMT_Configs"
 Library.Notifications = {}
-Library.ToggleKey = Enum.KeyCode.RightShift -- Default toggle key
+Library.ToggleKey = Enum.KeyCode.RightShift
 
 -- Services
 local TweenService = game:GetService("TweenService")
@@ -31,30 +29,30 @@ local Mouse = LocalPlayer:GetMouse()
 
 -- Modern Color Palette
 local Colors = {
-    Primary = Color3.fromRGB(15, 15, 23),        -- Very dark background
-    Secondary = Color3.fromRGB(25, 25, 35),      -- Panel backgrounds
-    Tertiary = Color3.fromRGB(35, 35, 45),       -- Hover states
-    Accent = Color3.fromRGB(88, 101, 242),       -- Discord-like purple
-    AccentHover = Color3.fromRGB(98, 111, 252),  -- Lighter accent
-    AccentDark = Color3.fromRGB(78, 91, 232),    -- Darker accent
-    Text = Color3.fromRGB(255, 255, 255),        -- Primary text
-    TextSecondary = Color3.fromRGB(180, 180, 190), -- Secondary text
-    TextMuted = Color3.fromRGB(120, 120, 130),   -- Muted text
-    Border = Color3.fromRGB(55, 55, 65),         -- Borders
-    Success = Color3.fromRGB(67, 181, 129),      -- Success green
-    Warning = Color3.fromRGB(250, 166, 26),      -- Warning orange
-    Error = Color3.fromRGB(237, 66, 69),         -- Error red
-    Gradient1 = Color3.fromRGB(88, 101, 242),    -- Gradient start
-    Gradient2 = Color3.fromRGB(142, 68, 173),    -- Gradient end
-    DropdownBg = Color3.fromRGB(20, 20, 30),     -- Dropdown background
-    DropdownHover = Color3.fromRGB(45, 45, 55),  -- Dropdown hover
-    ButtonPrimary = Color3.fromRGB(88, 101, 242), -- Primary button
-    ButtonSecondary = Color3.fromRGB(45, 45, 55), -- Secondary button
-    ButtonHover = Color3.fromRGB(98, 111, 252),   -- Button hover
-    ButtonActive = Color3.fromRGB(78, 91, 232)    -- Button active
+    Primary = Color3.fromRGB(15, 15, 23),
+    Secondary = Color3.fromRGB(25, 25, 35),
+    Tertiary = Color3.fromRGB(35, 35, 45),
+    Accent = Color3.fromRGB(88, 101, 242),
+    AccentHover = Color3.fromRGB(98, 111, 252),
+    AccentDark = Color3.fromRGB(78, 91, 232),
+    Text = Color3.fromRGB(255, 255, 255),
+    TextSecondary = Color3.fromRGB(180, 180, 190),
+    TextMuted = Color3.fromRGB(120, 120, 130),
+    Border = Color3.fromRGB(55, 55, 65),
+    Success = Color3.fromRGB(67, 181, 129),
+    Warning = Color3.fromRGB(250, 166, 26),
+    Error = Color3.fromRGB(237, 66, 69),
+    Gradient1 = Color3.fromRGB(88, 101, 242),
+    Gradient2 = Color3.fromRGB(142, 68, 173),
+    DropdownBg = Color3.fromRGB(20, 20, 30),
+    DropdownHover = Color3.fromRGB(45, 45, 55),
+    ButtonPrimary = Color3.fromRGB(88, 101, 242),
+    ButtonSecondary = Color3.fromRGB(45, 45, 55),
+    ButtonHover = Color3.fromRGB(98, 111, 252),
+    ButtonActive = Color3.fromRGB(78, 91, 232)
 }
 
--- Create ScreenGui with proper z-index handling
+-- Create ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BSMT_UI_Modern"
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -178,6 +176,36 @@ local function MakeDraggable(frame, handle)
     handle.InputBegan:Connect(onInputBegan)
     handle.InputChanged:Connect(onInputChanged)
     handle.InputEnded:Connect(onInputEnded)
+end
+
+-- Modern Ripple Effect (but improved)
+local function CreateModernRipple(button)
+    if not button then return end
+    button.MouseButton1Click:Connect(function()
+        local ripple = Instance.new("Frame")
+        ripple.Name = "ModernRipple"
+        ripple.Size = UDim2.new(0, 0, 0, 0)
+        ripple.Position = UDim2.new(0.5, 0, 0.5, 0)
+        ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+        ripple.BackgroundColor3 = Colors.Text
+        ripple.BackgroundTransparency = 0.8
+        ripple.BorderSizePixel = 0
+        ripple.ZIndex = button.ZIndex + 1
+        ripple.Parent = button
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = ripple
+        
+        SafeTween(ripple, {
+            Size = UDim2.new(2, 0, 2, 0),
+            BackgroundTransparency = 1
+        }, 0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, function()
+            if ripple and ripple.Parent then
+                ripple:Destroy()
+            end
+        end)
+    end)
 end
 
 -- Enhanced Notification System with Better Animations
@@ -644,83 +672,87 @@ function Library:CreateWindow(title)
             return label
         end
         
-        -- COMPLETELY REDESIGNED Professional Button Function
+        -- ENHANCED Button Function (without weird animations)
         function Tab:Button(text, callback)
             local flagName = "Button_" .. text:gsub("%s+", "_")
             
             local buttonFrame = Instance.new("Frame")
-            buttonFrame.Name = "ProfessionalButtonFrame"
-            buttonFrame.Size = UDim2.new(1, 0, 0, 45)
+            buttonFrame.Name = "ModernButtonFrame"
+            buttonFrame.Size = UDim2.new(1, 0, 0, 50)
             buttonFrame.BackgroundTransparency = 1
             buttonFrame.Parent = self.Content
             
             local button = Instance.new("TextButton")
-            button.Name = "ProfessionalButton"
+            button.Name = "ModernButton"
             button.Size = UDim2.new(1, 0, 1, 0)
             button.Position = UDim2.new(0, 0, 0, 0)
-            button.BackgroundColor3 = Colors.ButtonSecondary
+            button.BackgroundColor3 = Colors.ButtonPrimary
             button.BorderSizePixel = 0
             button.Text = text or "Button"
             button.TextColor3 = Colors.Text
-            button.TextSize = 14
-            button.Font = Enum.Font.GothamSemibold
+            button.TextSize = 15
+            button.Font = Enum.Font.GothamBold
             button.Parent = buttonFrame
             
-            -- Professional rounded corners
+            -- Modern rounded corners
             local buttonCorner = Instance.new("UICorner")
-            buttonCorner.CornerRadius = UDim.new(0, 8)
+            buttonCorner.CornerRadius = UDim.new(0, 12)
             buttonCorner.Parent = button
             
-            -- Subtle border for professional look
-            local buttonBorder = Instance.new("UIStroke")
-            buttonBorder.Thickness = 1
-            buttonBorder.Color = Colors.Border
-            buttonBorder.Transparency = 0.5
-            buttonBorder.Parent = button
+            -- Modern gradient effect
+            local gradient = Instance.new("UIGradient")
+            gradient.Rotation = 45
+            gradient.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Colors.Gradient1),
+                ColorSequenceKeypoint.new(1, Colors.Gradient2)
+            }
+            gradient.Parent = button
             
-            -- Professional icon (optional)
-            local buttonIcon = Instance.new("TextLabel")
-            buttonIcon.Size = UDim2.new(0, 20, 0, 20)
-            buttonIcon.Position = UDim2.new(0, 15, 0.5, -10)
-            buttonIcon.BackgroundTransparency = 1
-            buttonIcon.Text = "▶"
-            buttonIcon.TextColor3 = Colors.Accent
-            buttonIcon.TextSize = 12
-            buttonIcon.Font = Enum.Font.GothamBold
-            buttonIcon.Parent = button
+            -- Modern shadow
+            local shadow = Instance.new("Frame")
+            shadow.Name = "ButtonShadow"
+            shadow.Size = UDim2.new(1, 0, 1, 0)
+            shadow.Position = UDim2.new(0, 0, 0, 4)
+            shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            shadow.BackgroundTransparency = 0.8
+            shadow.BorderSizePixel = 0
+            shadow.ZIndex = button.ZIndex - 1
+            shadow.Parent = buttonFrame
             
-            -- Adjust text position to account for icon
-            button.TextXAlignment = Enum.TextXAlignment.Center
+            local shadowCorner = Instance.new("UICorner")
+            shadowCorner.CornerRadius = UDim.new(0, 12)
+            shadowCorner.Parent = shadow
             
-            -- Professional hover effects (no weird animations)
+            -- ENHANCED hover effects (no weird ripple unless wanted)
             button.MouseEnter:Connect(function()
-                SafeTween(button, {BackgroundColor3 = Colors.ButtonHover}, 0.2, Enum.EasingStyle.Quad)
-                SafeTween(buttonBorder, {Transparency = 0.2}, 0.2)
-                SafeTween(buttonIcon, {TextColor3 = Colors.AccentHover}, 0.2)
+                SafeTween(button, {Size = UDim2.new(1, 0, 1, 2)}, 0.2)
+                SafeTween(shadow, {BackgroundTransparency = 0.6}, 0.2)
+                SafeTween(gradient, {Rotation = 90}, 0.3)
             end)
             
             button.MouseLeave:Connect(function()
-                SafeTween(button, {BackgroundColor3 = Colors.ButtonSecondary}, 0.2, Enum.EasingStyle.Quad)
-                SafeTween(buttonBorder, {Transparency = 0.5}, 0.2)
-                SafeTween(buttonIcon, {TextColor3 = Colors.Accent}, 0.2)
+                SafeTween(button, {Size = UDim2.new(1, 0, 1, 0)}, 0.2)
+                SafeTween(shadow, {BackgroundTransparency = 0.8}, 0.2)
+                SafeTween(gradient, {Rotation = 45}, 0.3)
             end)
             
-            -- Professional click effects (no ripple/shockwave)
+            -- Click effects (no weird shockwave)
             button.MouseButton1Down:Connect(function()
-                SafeTween(button, {BackgroundColor3 = Colors.ButtonActive}, 0.1, Enum.EasingStyle.Quad)
-                SafeTween(button, {Size = UDim2.new(0.98, 0, 0.95, 0)}, 0.1, Enum.EasingStyle.Quad)
+                SafeTween(button, {Size = UDim2.new(0.98, 0, 0.95, 0)}, 0.1)
             end)
             
             button.MouseButton1Up:Connect(function()
-                SafeTween(button, {BackgroundColor3 = Colors.ButtonHover}, 0.1, Enum.EasingStyle.Quad)
-                SafeTween(button, {Size = UDim2.new(1, 0, 1, 0)}, 0.1, Enum.EasingStyle.Quad)
+                SafeTween(button, {Size = UDim2.new(1, 0, 1, 0)}, 0.1)
             end)
+            
+            -- OPTIONAL: Add ripple effect only if desired
+            -- CreateModernRipple(button)
             
             if callback then
                 button.MouseButton1Click:Connect(function()
-                    -- Professional feedback - just a subtle color change
-                    SafeTween(buttonIcon, {TextColor3 = Colors.Success}, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, function()
-                        SafeTween(buttonIcon, {TextColor3 = Colors.Accent}, 0.15)
+                    -- Success feedback
+                    SafeTween(button, {BackgroundTransparency = 0.3}, 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, function()
+                        SafeTween(button, {BackgroundTransparency = 0}, 0.1)
                     end)
                     
                     -- Update flag
@@ -733,7 +765,7 @@ function Library:CreateWindow(title)
             return button
         end
         
-        -- Modern Toggle Function with Flag Support
+        -- Modern Toggle Function
         function Tab:Toggle(text, default, callback)
             local flagName = "Toggle_" .. text:gsub("%s+", "_")
             Library.Flags[flagName] = default or false
@@ -800,7 +832,7 @@ function Library:CreateWindow(title)
             return toggleFrame
         end
         
-        -- Modern Slider Function with Flag Support
+        -- Modern Slider Function
         function Tab:Slider(text, min, max, default, callback)
             local flagName = "Slider_" .. text:gsub("%s+", "_")
             Library.Flags[flagName] = default or min
@@ -908,10 +940,10 @@ function Library:CreateWindow(title)
             return sliderFrame
         end
         
-        -- FIXED Dropdown Function - No More Blank List
+        -- COMPLETELY FIXED Dropdown Function
         function Tab:Dropdown(text, options, default, callback)
             local flagName = "Dropdown_" .. text:gsub("%s+", "_")
-            Library.Flags[flagName] = default or (options[1] or "Select")
+            Library.Flags[flagName] = default or options[1] or "Select"
             
             local dropdownFrame = Instance.new("Frame")
             dropdownFrame.Name = "ModernDropdown"
@@ -1058,9 +1090,10 @@ function Library:CreateWindow(title)
                 dropdownList.Size = UDim2.new(0, listWidth, 0, listHeight)
             end
             
-            -- Create option buttons - FIXED: No blank options
+            -- FIXED: Create option buttons - No blank options
+            local optionButtons = {}
             for i, option in ipairs(options) do
-                if option and option ~= "" then -- Only create non-empty options
+                if option and tostring(option) ~= "" then -- Only create non-empty options
                     local optionButton = Instance.new("TextButton")
                     optionButton.Size = UDim2.new(1, 0, 0, 28)
                     optionButton.BackgroundColor3 = Colors.DropdownBg
@@ -1081,20 +1114,42 @@ function Library:CreateWindow(title)
                     optionPadding.PaddingLeft = UDim.new(0, 10)
                     optionPadding.Parent = optionButton
                     
+                    -- Highlight current selection
+                    if tostring(option) == tostring(Library.Flags[flagName]) then
+                        optionButton.BackgroundColor3 = Colors.Accent
+                    end
+                    
                     -- Enhanced hover effects
                     optionButton.MouseEnter:Connect(function()
-                        SafeTween(optionButton, {BackgroundColor3 = Colors.DropdownHover}, 0.15)
-                        SafeTween(optionButton, {TextColor3 = Colors.Accent}, 0.15)
+                        if tostring(option) ~= tostring(Library.Flags[flagName]) then
+                            SafeTween(optionButton, {BackgroundColor3 = Colors.DropdownHover}, 0.15)
+                            SafeTween(optionButton, {TextColor3 = Colors.Accent}, 0.15)
+                        end
                     end)
                     
                     optionButton.MouseLeave:Connect(function()
-                        SafeTween(optionButton, {BackgroundColor3 = Colors.DropdownBg}, 0.15)
-                        SafeTween(optionButton, {TextColor3 = Colors.Text}, 0.15)
+                        if tostring(option) ~= tostring(Library.Flags[flagName]) then
+                            SafeTween(optionButton, {BackgroundColor3 = Colors.DropdownBg}, 0.15)
+                            SafeTween(optionButton, {TextColor3 = Colors.Text}, 0.15)
+                        end
                     end)
                     
                     optionButton.MouseButton1Click:Connect(function()
+                        -- Update flag
                         Library.Flags[flagName] = option
                         dropdownButton.Text = tostring(option)
+                        
+                        -- Update all option button highlights
+                        for _, btn in pairs(optionButtons) do
+                            if btn and btn.Parent then
+                                if btn.Text == tostring(option) then
+                                    SafeTween(btn, {BackgroundColor3 = Colors.Accent}, 0.15)
+                                else
+                                    SafeTween(btn, {BackgroundColor3 = Colors.DropdownBg}, 0.15)
+                                    SafeTween(btn, {TextColor3 = Colors.Text}, 0.15)
+                                end
+                            end
+                        end
                         
                         -- Enhanced close animation
                         isOpen = false
@@ -1112,6 +1167,8 @@ function Library:CreateWindow(title)
                             callback(option)
                         end
                     end)
+                    
+                    table.insert(optionButtons, optionButton)
                 end
             end
             
@@ -1200,6 +1257,17 @@ function Library:CreateWindow(title)
                     if table.find(options, value) then
                         Library.Flags[flagName] = value
                         dropdownButton.Text = tostring(value)
+                        -- Update option highlights
+                        for _, btn in pairs(optionButtons) do
+                            if btn and btn.Parent then
+                                if btn.Text == tostring(value) then
+                                    SafeTween(btn, {BackgroundColor3 = Colors.Accent}, 0.15)
+                                else
+                                    SafeTween(btn, {BackgroundColor3 = Colors.DropdownBg}, 0.15)
+                                    SafeTween(btn, {TextColor3 = Colors.Text}, 0.15)
+                                end
+                            end
+                        end
                         if callback then
                             callback(value)
                         end
@@ -1217,9 +1285,12 @@ function Library:CreateWindow(title)
                         end
                     end
                     
+                    -- Clear option buttons table
+                    optionButtons = {}
+                    
                     -- Recreate options - FIXED: No blank options
                     for i, option in ipairs(options) do
-                        if option and option ~= "" then -- Only create non-empty options
+                        if option and tostring(option) ~= "" then -- Only create non-empty options
                             local optionButton = Instance.new("TextButton")
                             optionButton.Size = UDim2.new(1, 0, 0, 28)
                             optionButton.BackgroundColor3 = Colors.DropdownBg
@@ -1240,19 +1311,40 @@ function Library:CreateWindow(title)
                             optionPadding.PaddingLeft = UDim.new(0, 10)
                             optionPadding.Parent = optionButton
                             
+                            -- Highlight current selection
+                            if tostring(option) == tostring(Library.Flags[flagName]) then
+                                optionButton.BackgroundColor3 = Colors.Accent
+                            end
+                            
                             optionButton.MouseEnter:Connect(function()
-                                SafeTween(optionButton, {BackgroundColor3 = Colors.DropdownHover}, 0.15)
-                                SafeTween(optionButton, {TextColor3 = Colors.Accent}, 0.15)
+                                if tostring(option) ~= tostring(Library.Flags[flagName]) then
+                                    SafeTween(optionButton, {BackgroundColor3 = Colors.DropdownHover}, 0.15)
+                                    SafeTween(optionButton, {TextColor3 = Colors.Accent}, 0.15)
+                                end
                             end)
                             
                             optionButton.MouseLeave:Connect(function()
-                                SafeTween(optionButton, {BackgroundColor3 = Colors.DropdownBg}, 0.15)
-                                SafeTween(optionButton, {TextColor3 = Colors.Text}, 0.15)
+                                if tostring(option) ~= tostring(Library.Flags[flagName]) then
+                                    SafeTween(optionButton, {BackgroundColor3 = Colors.DropdownBg}, 0.15)
+                                    SafeTween(optionButton, {TextColor3 = Colors.Text}, 0.15)
+                                end
                             end)
                             
                             optionButton.MouseButton1Click:Connect(function()
                                 Library.Flags[flagName] = option
                                 dropdownButton.Text = tostring(option)
+                                
+                                -- Update all option button highlights
+                                for _, btn in pairs(optionButtons) do
+                                    if btn and btn.Parent then
+                                        if btn.Text == tostring(option) then
+                                            SafeTween(btn, {BackgroundColor3 = Colors.Accent}, 0.15)
+                                        else
+                                            SafeTween(btn, {BackgroundColor3 = Colors.DropdownBg}, 0.15)
+                                            SafeTween(btn, {TextColor3 = Colors.Text}, 0.15)
+                                        end
+                                    end
+                                end
                                 
                                 isOpen = false
                                 SafeTween(dropdownList, {
@@ -1269,6 +1361,8 @@ function Library:CreateWindow(title)
                                     callback(option)
                                 end
                             end)
+                            
+                            table.insert(optionButtons, optionButton)
                         end
                     end
                 end
@@ -1277,7 +1371,7 @@ function Library:CreateWindow(title)
             return dropdownObject
         end
         
-        -- Modern ColorPicker Function with Flag Support
+        -- Modern ColorPicker Function
         function Tab:ColorPicker(text, default, callback)
             local flagName = "ColorPicker_" .. text:gsub("%s+", "_")
             Library.Flags[flagName] = default or Color3.fromRGB(255, 255, 255)
@@ -1436,13 +1530,13 @@ function Library:CreateWindow(title)
     -- Show enhanced welcome notification
     spawn(function()
         wait(0.5) -- Small delay to ensure UI is fully loaded
-        Library:Notify("🎉 BSMT UI Professional", "UI Library loaded successfully! Press " .. Library.ToggleKey.Name .. " to toggle the interface.", 5, "success")
+        Library:Notify("🎉 BSMT UI Enhanced", "UI Library loaded successfully! Press " .. Library.ToggleKey.Name .. " to toggle the interface.", 5, "success")
     end)
     
     return Window
 end
 
--- COMPLETELY WORKING Config System with Proper Flag Management
+-- Enhanced Config System with Full Functionality
 function Library:SaveConfig(name)
     if not name or name == "" then
         Library:Notify("❌ Save Failed", "Please provide a valid config name", 3, "error")
@@ -1547,7 +1641,7 @@ function Library:GetConfigList()
     end)
     
     if not success then
-        Library:Notify("Config List Error", "Failed to get config list: " .. tostring(result), 3, "error")
+        Library:Notify("❌ Config List Error", "Failed to get config list: " .. tostring(result), 3, "error")
     end
     
     return configs
