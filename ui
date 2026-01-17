@@ -609,17 +609,34 @@ function Window:Tab(name)
     contentList.Padding = UDim.new(0, 8)
     contentList.Parent = tabContent
     
-    tab.Button = tabButton
+    tab.TabButton = tabButton
     tab.Content = tabContent
     tab.Indicator = indicator
     
-    -- Add all UI element methods to the tab
-    tab.Toggle = function(_, ...) return Window.Toggle(tab, ...) end
-    tab.Slider = function(_, ...) return Window.Slider(tab, ...) end
-    tab.Button = function(_, ...) return Window.Button(tab, ...) end
-    tab.Dropdown = function(_, ...) return Window.Dropdown(tab, ...) end
-    tab.ColorPicker = function(_, ...) return Window.ColorPicker(tab, ...) end
-    tab.Label = function(_, ...) return Window.Label(tab, ...) end
+    -- Add UI element methods to the tab
+    function tab:Toggle(name, default, callback)
+        return Window.Toggle(self, name, default, callback)
+    end
+    
+    function tab:Slider(name, min, max, default, callback)
+        return Window.Slider(self, name, min, max, default, callback)
+    end
+    
+    function tab:Button(name, callback)
+        return Window.Button(self, name, callback)
+    end
+    
+    function tab:Dropdown(name, options, default, callback)
+        return Window.Dropdown(self, name, options, default, callback)
+    end
+    
+    function tab:ColorPicker(name, default, callback)
+        return Window.ColorPicker(self, name, default, callback)
+    end
+    
+    function tab:Label(text)
+        return Window.Label(self, text)
+    end
     
     tabButton.MouseButton1Click:Connect(function()
         self:SelectTab(tab)
@@ -649,7 +666,7 @@ end
 function Window:SelectTab(tab)
     if self.ActiveTab then
         self.ActiveTab.Content.Visible = false
-        Tween(self.ActiveTab.Button, {
+        Tween(self.ActiveTab.TabButton, {
             BackgroundColor3 = Color3.fromRGB(20, 20, 25),
             TextColor3 = Color3.fromRGB(150, 150, 150)
         })
@@ -658,7 +675,7 @@ function Window:SelectTab(tab)
     
     self.ActiveTab = tab
     tab.Content.Visible = true
-    Tween(tab.Button, {
+    Tween(tab.TabButton, {
         BackgroundColor3 = Color3.fromRGB(30, 30, 40),
         TextColor3 = Color3.fromRGB(255, 255, 255)
     })
