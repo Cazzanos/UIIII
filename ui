@@ -178,29 +178,45 @@ function PreviewSystem:Setup()
 end
 
 function PreviewSystem:LoadCharacter()
-    if LocalPlayer.Character then
-        local clone = LocalPlayer.Character:Clone()
-        
-        -- Remove scripts and unnecessary parts
-        for _, v in pairs(clone:GetDescendants()) do
-            if v:IsA("Script") or v:IsA("LocalScript") or v:IsA("ModuleScript") then
-                v:Destroy()
-            end
+    -- Wait for character to load
+    if not LocalPlayer.Character then
+        LocalPlayer.CharacterAdded:Wait()
+    end
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    -- Wait for character to fully load
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if not humanoid then return end
+    
+    -- Clone character
+    local success, clone = pcall(function()
+        return character:Clone()
+    end)
+    
+    if not success or not clone then 
+        warn("Failed to clone character for preview")
+        return 
+    end
+    
+    -- Remove scripts and unnecessary parts
+    for _, v in pairs(clone:GetDescendants()) do
+        if v:IsA("Script") or v:IsA("LocalScript") or v:IsA("ModuleScript") then
+            v:Destroy()
         end
-        
-        clone.Parent = self.ViewportFrame
-        self.Character = clone
-        
-        -- Position camera
-        local hrp = clone:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            self.ViewportCamera.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 2, 5), hrp.Position)
-        end
+    end
+    
+    clone.Parent = self.ViewportFrame
+    self.Character = clone
+    
+    -- Position camera
+    local hrp = clone:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        self.ViewportCamera.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 2, 5), hrp.Position)
         
         -- Make character face camera
-        if hrp then
-            hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(180), 0)
-        end
+        hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(180), 0)
     end
 end
 
