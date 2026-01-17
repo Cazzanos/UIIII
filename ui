@@ -559,7 +559,7 @@ function Window:Toggle()
 end
 
 function Window:Tab(name)
-    local tab = setmetatable({}, {__index = Window})
+    local tab = {}
     tab.Name = name
     tab.Window = self
     tab.Elements = {}
@@ -612,6 +612,14 @@ function Window:Tab(name)
     tab.Button = tabButton
     tab.Content = tabContent
     tab.Indicator = indicator
+    
+    -- Add all UI element methods to the tab
+    tab.Toggle = function(_, ...) return Window.Toggle(tab, ...) end
+    tab.Slider = function(_, ...) return Window.Slider(tab, ...) end
+    tab.Button = function(_, ...) return Window.Button(tab, ...) end
+    tab.Dropdown = function(_, ...) return Window.Dropdown(tab, ...) end
+    tab.ColorPicker = function(_, ...) return Window.ColorPicker(tab, ...) end
+    tab.Label = function(_, ...) return Window.Label(tab, ...) end
     
     tabButton.MouseButton1Click:Connect(function()
         self:SelectTab(tab)
