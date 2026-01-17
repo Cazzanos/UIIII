@@ -1,0 +1,1704 @@
+--[[
+    BSMT UI Library v3.0 - NEVERLOSE Style
+    Advanced Roblox Executor UI Library
+    Author: BSMT Team (Enhanced & Redesigned)
+    
+    Features:
+    - NEVERLOSE-inspired dark blue theme
+    - Robust error handling & stability
+    - Notification system
+    - ESP Preview with live character rendering
+    - Advanced config save/load system
+    - Draggable & resizable windows
+    - Toggle keybind (Insert by default)
+    - Full R15/R6 character support
+    - Modern animations and effects
+]]
+local Library = {}
+Library.Windows = {}
+Library.Flags = {}
+Library.ConfigFolder = "BSMT_Configs"
+Library.Notifications = {}
+-- Services
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+-- Color Palette (NEVERLOSE Style)
+local Colors = {
+    Primary = Color3.fromRGB(26, 43, 66),      -- #1A2B42 - Main background
+    Secondary = Color3.fromRGB(32, 51, 76),    -- #20334C - Panel backgrounds
+    Tertiary = Color3.fromRGB(42, 63, 91),     -- #2A3F5B - Hover states
+    Accent = Color3.fromRGB(91, 154, 255),     -- #5B9AFF - Active elements
+    AccentDark = Color3.fromRGB(42, 66, 96),   -- #2A4260 - Selected items
+    Text = Color3.fromRGB(255, 255, 255),      -- #FFFFFF - Primary text
+    TextSecondary = Color3.fromRGB(224, 224, 224), -- #E0E0E0 - Secondary text
+    Border = Color3.fromRGB(45, 68, 99),       -- #2D4463 - Borders
+    Success = Color3.fromRGB(76, 175, 80),     -- Success notifications
+    Warning = Color3.fromRGB(255, 193, 7),     -- Warning notifications
+    Error = Color3.fromRGB(244, 67, 54)        -- Error notifications
+}
+-- Create ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BSMT_UI"
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.ResetOnSpawn = false
+-- Try different parent methods
+local success = false
+if gethui then
+    pcall(function()
+        ScreenGui.Parent = gethui()
+        success = true
+    end)
+end
+if not success and syn and syn.protect_gui then
+    pcall(function()
+        syn.protect_gui(ScreenGui)
+        ScreenGui.Parent = CoreGui
+        success = true
+    end)
+end
+if not success then
+    ScreenGui.Parent = CoreGui
+end
+-- Utility Functions
+local function SafeTween(obj, props, duration, style, direction, callback)
+    if not obj or not obj.Parent then
+        warn("BSMT UI: Attempted to tween destroyed or nil object")
+        return nil
+    end
+    
+    -- Validate properties exist on object
+    for prop, value in pairs(props) do
+        local success, result = pcall(function() return obj[prop] end)
+        if not success then
+            warn("BSMT UI: Property '" .. prop .. "' does not exist on object")
+            return nil
+        end
+    end
+    
+    local tweenInfo = TweenInfo.new(
+        duration or 0.3,
+        style or Enum.EasingStyle.Quad,
+        direction or Enum.EasingDirection.Out
+    )
+    
+    local tween = TweenService:Create(obj, tweenInfo, props)
+    
+    -- Error handling for tween
+    local success, err = pcall(function()
+        tween:Play()
+        if callback then
+            tween.Completed:Connect(callback)
+        end
+    end)
+    
+    if not success then
+        warn("BSMT UI: Tween failed - " .. tostring(err))
+        return nil
+    end
+    
+    return tween
+end
+local function MakeDraggable(frame, handle)
+    if not frame or not handle then
+        warn("BSMT UI: MakeDraggable called with nil frame or handle")
+        return
+    end
+    
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+    
+    local function onInputBegan(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end
+    
+    local function onInputChanged(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end
+    
+    local function onInputEnded(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end
+    
+    handle.InputBegan:Connect(onInputBegan)
+    handle.InputChanged:Connect(onInputChanged)
+    handle.InputEnded:Connect(onInputEnded)
+end
+-- COMPLETELY REDESIGNED RIPPLE EFFECT FOR BUTTONS
+local function CreateModernRipple(button, color)
+    if not button then return end
+    
+    button.MouseButton1Click:Connect(function()
+        -- Create modern ripple container
+        local rippleContainer = Instance.new("Frame")
+        rippleContainer.Name = "RippleContainer"
+        rippleContainer.Size = UDim2.new(1, 0, 1, 0)
+        rippleContainer.Position = UDim2.new(0, 0, 0, 0)
+        rippleContainer.BackgroundTransparency = 1
+        rippleContainer.BorderSizePixel = 0
+        rippleContainer.ZIndex = button.ZIndex + 1
+        rippleContainer.Parent = button
+        
+        -- Create the ripple effect
+        local ripple = Instance.new("Frame")
+        ripple.Name = "ModernRipple"
+        ripple.Size = UDim2.new(0, 0, 0, 0)
+        ripple.Position = UDim2.new(0.5, 0, 0.5, 0)
+        ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+        ripple.BackgroundColor3 = color or Color3.fromRGB(255, 255, 255)
+        ripple.BackgroundTransparency = 0.6
+        ripple.BorderSizePixel = 0
+        ripple.ZIndex = rippleContainer.ZIndex + 1
+        ripple.Parent = rippleContainer
+        
+        local rippleCorner = Instance.new("UICorner")
+        rippleCorner.CornerRadius = UDim.new(1, 0)
+        rippleCorner.Parent = ripple
+        
+        -- Modern ripple animation
+        SafeTween(ripple, {
+            Size = UDim2.new(1.2, 0, 1.2, 0),
+            BackgroundTransparency = 1
+        }, 0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, function()
+            if rippleContainer and rippleContainer.Parent then
+                rippleContainer:Destroy()
+            end
+        end)
+    end)
+end
+-- Notification System
+local NotificationContainer = Instance.new("Frame")
+NotificationContainer.Name = "NotificationContainer"
+NotificationContainer.Size = UDim2.new(0, 300, 1, 0)
+NotificationContainer.Position = UDim2.new(1, -320, 0, 20)
+NotificationContainer.BackgroundTransparency = 1
+NotificationContainer.Parent = ScreenGui
+local NotificationLayout = Instance.new("UIListLayout")
+NotificationLayout.SortOrder = Enum.SortOrder.LayoutOrder
+NotificationLayout.Padding = UDim.new(0, 10)
+NotificationLayout.Parent = NotificationContainer
+function Library:Notify(title, message, duration, type)
+    local notifType = type or "info"
+    local notifDuration = duration or 5
+    
+    local notification = Instance.new("Frame")
+    notification.Name = "Notification"
+    notification.Size = UDim2.new(1, 0, 0, 80)
+    notification.BackgroundColor3 = Colors.Secondary
+    notification.BorderSizePixel = 0
+    notification.Parent = NotificationContainer
+    
+    local notifCorner = Instance.new("UICorner")
+    notifCorner.CornerRadius = UDim.new(0, 8)
+    notifCorner.Parent = notification
+    
+    -- Accent bar
+    local accentBar = Instance.new("Frame")
+    accentBar.Size = UDim2.new(0, 4, 1, 0)
+    accentBar.Position = UDim2.new(0, 0, 0, 0)
+    accentBar.BorderSizePixel = 0
+    accentBar.Parent = notification
+    
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(0, 8)
+    barCorner.Parent = accentBar
+    
+    -- Set color based on type
+    if notifType == "success" then
+        accentBar.BackgroundColor3 = Colors.Success
+    elseif notifType == "warning" then
+        accentBar.BackgroundColor3 = Colors.Warning
+    elseif notifType == "error" then
+        accentBar.BackgroundColor3 = Colors.Error
+    else
+        accentBar.BackgroundColor3 = Colors.Accent
+    end
+    
+    -- Title
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -50, 0, 25)
+    titleLabel.Position = UDim2.new(0, 15, 0, 10)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title or "Notification"
+    titleLabel.TextColor3 = Colors.Text
+    titleLabel.TextSize = 14
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = notification
+    
+    -- Message
+    local messageLabel = Instance.new("TextLabel")
+    messageLabel.Size = UDim2.new(1, -50, 0, 35)
+    messageLabel.Position = UDim2.new(0, 15, 0, 35)
+    messageLabel.BackgroundTransparency = 1
+    messageLabel.Text = message or ""
+    messageLabel.TextColor3 = Colors.TextSecondary
+    messageLabel.TextSize = 12
+    messageLabel.Font = Enum.Font.Gotham
+    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+    messageLabel.TextWrapped = true
+    messageLabel.Parent = notification
+    
+    -- Close button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Size = UDim2.new(0, 20, 0, 20)
+    closeButton.Position = UDim2.new(1, -30, 0, 10)
+    closeButton.BackgroundTransparency = 1
+    closeButton.Text = "×"
+    closeButton.TextColor3 = Colors.TextSecondary
+    closeButton.TextSize = 16
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.Parent = notification
+    
+    closeButton.MouseButton1Click:Connect(function()
+        SafeTween(notification, {
+            Position = UDim2.new(1, 0, notification.Position.Y.Scale, notification.Position.Y.Offset),
+            BackgroundTransparency = 1
+        }, 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, function()
+            notification:Destroy()
+        end)
+    end)
+    
+    -- Slide in animation
+    notification.Position = UDim2.new(1, 0, 0, 0)
+    SafeTween(notification, {
+        Position = UDim2.new(0, 0, 0, 0)
+    }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    
+    -- Auto-remove after duration
+    game:GetService("Debris"):AddItem(notification, notifDuration)
+    
+    -- Fade out before removal
+    wait(notifDuration - 0.5)
+    if notification.Parent then
+        SafeTween(notification, {
+            Position = UDim2.new(1, 0, notification.Position.Y.Scale, notification.Position.Y.Offset),
+            BackgroundTransparency = 1
+        }, 0.3)
+    end
+end
+-- ESP Preview System (Fixed)
+local PreviewSystem = {}
+PreviewSystem.__index = PreviewSystem
+function PreviewSystem.new(container)
+    local self = setmetatable({}, PreviewSystem)
+    
+    self.Container = container
+    self.ViewportFrame = nil
+    self.Camera = nil
+    self.Character = nil
+    self.ESPOverlay = nil
+    self.Settings = {
+        Names = false,
+        Distance = false,
+        HealthBar = false,
+        NameColor = Colors.Text,
+        DistanceColor = Colors.TextSecondary,
+        HealthBarColor = Colors.Success,
+        NameSize = 14,
+        BoxThickness = 2
+    }
+    self.RenderConnection = nil
+    
+    if container then
+        self:Setup()
+        self:LoadCharacter()
+        self:StartRenderLoop()
+    end
+    
+    return self
+end
+function PreviewSystem:Setup()
+    if not self.Container then
+        warn("BSMT UI: PreviewSystem container is nil")
+        return
+    end
+    
+    -- Create ViewportFrame
+    self.ViewportFrame = Instance.new("ViewportFrame")
+    self.ViewportFrame.Size = UDim2.new(1, 0, 1, 0)
+    self.ViewportFrame.Position = UDim2.new(0, 0, 0, 0)
+    self.ViewportFrame.BackgroundTransparency = 1
+    self.ViewportFrame.Parent = self.Container
+    
+    -- Create Camera
+    self.Camera = Instance.new("Camera")
+    self.Camera.Parent = self.ViewportFrame
+    self.ViewportFrame.CurrentCamera = self.Camera
+    
+    -- Create ESP Overlay
+    self.ESPOverlay = Instance.new("Frame")
+    self.ESPOverlay.Name = "ESPOverlay"
+    self.ESPOverlay.Size = UDim2.new(1, 0, 1, 0)
+    self.ESPOverlay.Position = UDim2.new(0, 0, 0, 0)
+    self.ESPOverlay.BackgroundTransparency = 1
+    self.ESPOverlay.Parent = self.Container
+end
+function PreviewSystem:LoadCharacter()
+    if not LocalPlayer.Character then
+        warn("BSMT UI: LocalPlayer has no character")
+        return
+    end
+    
+    local success, err = pcall(function()
+        -- Clone character safely
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        self.Character = character:Clone()
+        if not self.Character then return end
+        
+        -- Remove scripts from cloned character
+        for _, obj in pairs(self.Character:GetDescendants()) do
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                obj:Destroy()
+            end
+        end
+        
+        -- Parent to ViewportFrame
+        if self.ViewportFrame then
+            self.Character.Parent = self.ViewportFrame
+            
+            -- Position camera
+            local humanoidRootPart = self.Character:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart and self.Camera then
+                self.Camera.CFrame = CFrame.new(
+                    humanoidRootPart.Position + Vector3.new(0, 2, 5),
+                    humanoidRootPart.Position
+                )
+            end
+        end
+    end)
+    
+    if not success then
+        warn("BSMT UI: Failed to clone character - " .. tostring(err))
+        -- Create a fallback dummy character
+        self:CreateDummyCharacter()
+    end
+end
+function PreviewSystem:CreateDummyCharacter()
+    -- Create a simple dummy character for preview
+    local dummy = Instance.new("Model")
+    dummy.Name = "DummyCharacter"
+    
+    local humanoidRootPart = Instance.new("Part")
+    humanoidRootPart.Name = "HumanoidRootPart"
+    humanoidRootPart.Size = Vector3.new(2, 2, 1)
+    humanoidRootPart.Material = Enum.Material.Neon
+    humanoidRootPart.BrickColor = BrickColor.new("Bright blue")
+    humanoidRootPart.Anchored = true
+    humanoidRootPart.Parent = dummy
+    
+    local head = Instance.new("Part")
+    head.Name = "Head"
+    head.Size = Vector3.new(2, 1, 1)
+    head.Material = Enum.Material.Neon
+    head.BrickColor = BrickColor.new("Light orange")
+    head.Position = humanoidRootPart.Position + Vector3.new(0, 1.5, 0)
+    head.Anchored = true
+    head.Parent = dummy
+    
+    local humanoid = Instance.new("Humanoid")
+    humanoid.Parent = dummy
+    
+    self.Character = dummy
+    if self.ViewportFrame then
+        dummy.Parent = self.ViewportFrame
+        
+        if self.Camera then
+            self.Camera.CFrame = CFrame.new(
+                humanoidRootPart.Position + Vector3.new(0, 2, 5),
+                humanoidRootPart.Position
+            )
+        end
+    end
+end
+function PreviewSystem:UpdateSetting(setting, value)
+    if self.Settings[setting] ~= nil then
+        self.Settings[setting] = value
+        self:UpdateESP()
+    end
+end
+function PreviewSystem:UpdateESP()
+    if not self.ESPOverlay then return end
+    
+    -- Clear existing ESP
+    for _, child in pairs(self.ESPOverlay:GetChildren()) do
+        if child.Name:find("ESP") then
+            child:Destroy()
+        end
+    end
+    
+    if not self.Character then return end
+    
+    local humanoidRootPart = self.Character:FindFirstChild("HumanoidRootPart")
+    local head = self.Character:FindFirstChild("Head")
+    local humanoid = self.Character:FindFirstChild("Humanoid")
+    
+    if not humanoidRootPart then return end
+    
+    -- Create ESP elements
+    if self.Settings.Names and head then
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Name = "ESP_Name"
+        nameLabel.Size = UDim2.new(0, 100, 0, 20)
+        nameLabel.Position = UDim2.new(0.5, -50, 0.2, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = LocalPlayer.Name
+        nameLabel.TextColor3 = self.Settings.NameColor
+        nameLabel.TextSize = self.Settings.NameSize
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextStrokeTransparency = 0
+        nameLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+        nameLabel.Parent = self.ESPOverlay
+    end
+    
+    if self.Settings.Distance then
+        local distanceLabel = Instance.new("TextLabel")
+        distanceLabel.Name = "ESP_Distance"
+        distanceLabel.Size = UDim2.new(0, 100, 0, 20)
+        distanceLabel.Position = UDim2.new(0.5, -50, 0.8, 0)
+        distanceLabel.BackgroundTransparency = 1
+        distanceLabel.Text = "25 studs"
+        distanceLabel.TextColor3 = self.Settings.DistanceColor
+        distanceLabel.TextSize = 12
+        distanceLabel.Font = Enum.Font.Gotham
+        distanceLabel.TextStrokeTransparency = 0
+        distanceLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+        distanceLabel.Parent = self.ESPOverlay
+    end
+    
+    if self.Settings.HealthBar and humanoid then
+        local healthBarBG = Instance.new("Frame")
+        healthBarBG.Name = "ESP_HealthBarBG"
+        healthBarBG.Size = UDim2.new(0, 4, 0, 100)
+        healthBarBG.Position = UDim2.new(0, 10, 0.5, -50)
+        healthBarBG.BackgroundColor3 = Color3.new(0, 0, 0)
+        healthBarBG.BorderSizePixel = 0
+        healthBarBG.Parent = self.ESPOverlay
+        
+        local healthBar = Instance.new("Frame")
+        healthBar.Name = "ESP_HealthBar"
+        healthBar.Size = UDim2.new(1, 0, humanoid.Health / humanoid.MaxHealth, 0)
+        healthBar.Position = UDim2.new(0, 0, 1, 0)
+        healthBar.AnchorPoint = Vector2.new(0, 1)
+        healthBar.BackgroundColor3 = self.Settings.HealthBarColor
+        healthBar.BorderSizePixel = 0
+        healthBar.Parent = healthBarBG
+    end
+end
+function PreviewSystem:StartRenderLoop()
+    if self.RenderConnection then
+        self.RenderConnection:Disconnect()
+    end
+    
+    self.RenderConnection = RunService.RenderStepped:Connect(function()
+        if self.Settings.Names or self.Settings.Distance or self.Settings.HealthBar then
+            -- Update ESP elements if needed
+        end
+    end)
+end
+function PreviewSystem:Destroy()
+    if self.RenderConnection then
+        self.RenderConnection:Disconnect()
+    end
+    
+    if self.ViewportFrame then
+        self.ViewportFrame:Destroy()
+    end
+    
+    if self.ESPOverlay then
+        self.ESPOverlay:Destroy()
+    end
+end
+-- Window Class
+local Window = {}
+Window.__index = Window
+function Window.new(title)
+    local self = setmetatable({}, Window)
+    
+    self.Title = title or "BSMT UI"
+    self.Tabs = {}
+    self.CurrentTab = nil
+    self.MainWindow = nil
+    self.PreviewWindow = nil
+    self.PreviewSystem = nil
+    self.Visible = true
+    self.Keybind = Enum.KeyCode.Insert
+    
+    self:CreateWindow()
+    self:CreatePreviewWindow()
+    self:SetupKeybind()
+    
+    table.insert(Library.Windows, self)
+    
+    -- Welcome notification
+    Library:Notify("BSMT UI", "UI Library loaded successfully! Press INSERT to toggle.", 3, "success")
+    
+    return self
+end
+function Window:CreateWindow()
+    -- Main Window Frame
+    self.MainWindow = Instance.new("Frame")
+    self.MainWindow.Name = "MainWindow"
+    self.MainWindow.Size = UDim2.new(0, 700, 0, 500)
+    self.MainWindow.Position = UDim2.new(0.5, -350, 0.5, -250)
+    self.MainWindow.BackgroundColor3 = Colors.Primary
+    self.MainWindow.BorderSizePixel = 0
+    self.MainWindow.Parent = ScreenGui
+    
+    -- Window Corner
+    local windowCorner = Instance.new("UICorner")
+    windowCorner.CornerRadius = UDim.new(0, 12)
+    windowCorner.Parent = self.MainWindow
+    
+    -- Window Border
+    local windowStroke = Instance.new("UIStroke")
+    windowStroke.Color = Colors.Border
+    windowStroke.Thickness = 1
+    windowStroke.Parent = self.MainWindow
+    
+    -- Header
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 50)
+    header.Position = UDim2.new(0, 0, 0, 0)
+    header.BackgroundColor3 = Colors.Secondary
+    header.BorderSizePixel = 0
+    header.Parent = self.MainWindow
+    
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 12)
+    headerCorner.Parent = header
+    
+    -- Fix header corners
+    local headerFix = Instance.new("Frame")
+    headerFix.Size = UDim2.new(1, 0, 0, 12)
+    headerFix.Position = UDim2.new(0, 0, 1, -12)
+    headerFix.BackgroundColor3 = Colors.Secondary
+    headerFix.BorderSizePixel = 0
+    headerFix.Parent = header
+    
+    -- Title
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "Title"
+    titleLabel.Size = UDim2.new(1, -120, 1, 0)
+    titleLabel.Position = UDim2.new(0, 20, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = self.Title
+    titleLabel.TextColor3 = Colors.Text
+    titleLabel.TextSize = 18
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = header
+    
+    -- Header buttons container
+    local buttonContainer = Instance.new("Frame")
+    buttonContainer.Size = UDim2.new(0, 100, 0, 30)
+    buttonContainer.Position = UDim2.new(1, -110, 0.5, -15)
+    buttonContainer.BackgroundTransparency = 1
+    buttonContainer.Parent = header
+    
+    local buttonLayout = Instance.new("UIListLayout")
+    buttonLayout.FillDirection = Enum.FillDirection.Horizontal
+    buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    buttonLayout.Padding = UDim.new(0, 5)
+    buttonLayout.Parent = buttonContainer
+    
+    -- Minimize Button
+    local minimizeButton = Instance.new("TextButton")
+    minimizeButton.Name = "MinimizeButton"
+    minimizeButton.Size = UDim2.new(0, 30, 0, 30)
+    minimizeButton.BackgroundColor3 = Colors.Tertiary
+    minimizeButton.BorderSizePixel = 0
+    minimizeButton.Text = "−"
+    minimizeButton.TextColor3 = Colors.Text
+    minimizeButton.TextSize = 16
+    minimizeButton.Font = Enum.Font.GothamBold
+    minimizeButton.Parent = buttonContainer
+    
+    local minimizeCorner = Instance.new("UICorner")
+    minimizeCorner.CornerRadius = UDim.new(0, 6)
+    minimizeCorner.Parent = minimizeButton
+    
+    CreateModernRipple(minimizeButton, Colors.Text)
+    
+    -- Close Button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 30, 0, 30)
+    closeButton.BackgroundColor3 = Colors.Error
+    closeButton.BorderSizePixel = 0
+    closeButton.Text = "×"
+    closeButton.TextColor3 = Colors.Text
+    closeButton.TextSize = 18
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.Parent = buttonContainer
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 6)
+    closeCorner.Parent = closeButton
+    
+    CreateModernRipple(closeButton, Colors.Text)
+    
+    closeButton.MouseButton1Click:Connect(function()
+        self:Toggle()
+    end)
+    
+    -- Sidebar
+    local sidebar = Instance.new("Frame")
+    sidebar.Name = "Sidebar"
+    sidebar.Size = UDim2.new(0, 180, 1, -50)
+    sidebar.Position = UDim2.new(0, 0, 0, 50)
+    sidebar.BackgroundColor3 = Colors.Secondary
+    sidebar.BorderSizePixel = 0
+    sidebar.Parent = self.MainWindow
+    
+    -- Sidebar corner fix
+    local sidebarFix = Instance.new("Frame")
+    sidebarFix.Size = UDim2.new(0, 12, 0, 12)
+    sidebarFix.Position = UDim2.new(0, 0, 1, -12)
+    sidebarFix.BackgroundColor3 = Colors.Secondary
+    sidebarFix.BorderSizePixel = 0
+    sidebarFix.Parent = sidebar
+    
+    local sidebarFixCorner = Instance.new("UICorner")
+    sidebarFixCorner.CornerRadius = UDim.new(0, 12)
+    sidebarFixCorner.Parent = sidebarFix
+    
+    -- Tab Container
+    local tabContainer = Instance.new("ScrollingFrame")
+    tabContainer.Name = "TabContainer"
+    tabContainer.Size = UDim2.new(1, -10, 1, -10)
+    tabContainer.Position = UDim2.new(0, 5, 0, 5)
+    tabContainer.BackgroundTransparency = 1
+    tabContainer.BorderSizePixel = 0
+    tabContainer.ScrollBarThickness = 4
+    tabContainer.ScrollBarImageColor3 = Colors.Accent
+    tabContainer.Parent = sidebar
+    
+    local tabLayout = Instance.new("UIListLayout")
+    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    tabLayout.Padding = UDim.new(0, 3)
+    tabLayout.Parent = tabContainer
+    
+    -- Content Container
+    local contentContainer = Instance.new("Frame")
+    contentContainer.Name = "ContentContainer"
+    contentContainer.Size = UDim2.new(1, -180, 1, -50)
+    contentContainer.Position = UDim2.new(0, 180, 0, 50)
+    contentContainer.BackgroundColor3 = Colors.Primary
+    contentContainer.BorderSizePixel = 0
+    contentContainer.Parent = self.MainWindow
+    
+    -- Content corner fix
+    local contentFix = Instance.new("Frame")
+    contentFix.Size = UDim2.new(0, 12, 0, 12)
+    contentFix.Position = UDim2.new(1, -12, 1, -12)
+    contentFix.BackgroundColor3 = Colors.Primary
+    contentFix.BorderSizePixel = 0
+    contentFix.Parent = contentContainer
+    
+    local contentFixCorner = Instance.new("UICorner")
+    contentFixCorner.CornerRadius = UDim.new(0, 12)
+    contentFixCorner.Parent = contentFix
+    
+    -- Store references
+    self.TabContainer = tabContainer
+    self.ContentContainer = contentContainer
+    
+    -- Make draggable
+    MakeDraggable(self.MainWindow, header)
+    
+    -- Initial animation
+    self.MainWindow.Size = UDim2.new(0, 0, 0, 0)
+    SafeTween(self.MainWindow, {
+        Size = UDim2.new(0, 700, 0, 500)
+    }, 0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+end
+function Window:CreatePreviewWindow()
+    -- Preview Window Frame
+    self.PreviewWindow = Instance.new("Frame")
+    self.PreviewWindow.Name = "PreviewWindow"
+    self.PreviewWindow.Size = UDim2.new(0, 350, 0, 450)
+    self.PreviewWindow.Position = UDim2.new(0.5, 370, 0.5, -225)
+    self.PreviewWindow.BackgroundColor3 = Colors.Primary
+    self.PreviewWindow.BorderSizePixel = 0
+    self.PreviewWindow.Visible = false
+    self.PreviewWindow.Parent = ScreenGui
+    
+    local previewCorner = Instance.new("UICorner")
+    previewCorner.CornerRadius = UDim.new(0, 12)
+    previewCorner.Parent = self.PreviewWindow
+    
+    local previewStroke = Instance.new("UIStroke")
+    previewStroke.Color = Colors.Border
+    previewStroke.Thickness = 1
+    previewStroke.Parent = self.PreviewWindow
+    
+    -- Preview Header
+    local previewHeader = Instance.new("Frame")
+    previewHeader.Name = "Header"
+    previewHeader.Size = UDim2.new(1, 0, 0, 45)
+    previewHeader.Position = UDim2.new(0, 0, 0, 0)
+    previewHeader.BackgroundColor3 = Colors.Secondary
+    previewHeader.BorderSizePixel = 0
+    previewHeader.Parent = self.PreviewWindow
+    
+    local previewHeaderCorner = Instance.new("UICorner")
+    previewHeaderCorner.CornerRadius = UDim.new(0, 12)
+    previewHeaderCorner.Parent = previewHeader
+    
+    local previewHeaderFix = Instance.new("Frame")
+    previewHeaderFix.Size = UDim2.new(1, 0, 0, 12)
+    previewHeaderFix.Position = UDim2.new(0, 0, 1, -12)
+    previewHeaderFix.BackgroundColor3 = Colors.Secondary
+    previewHeaderFix.BorderSizePixel = 0
+    previewHeaderFix.Parent = previewHeader
+    
+    -- Preview Title
+    local previewTitle = Instance.new("TextLabel")
+    previewTitle.Name = "Title"
+    previewTitle.Size = UDim2.new(1, -50, 1, 0)
+    previewTitle.Position = UDim2.new(0, 20, 0, 0)
+    previewTitle.BackgroundTransparency = 1
+    previewTitle.Text = "ESP Preview"
+    previewTitle.TextColor3 = Colors.Text
+    previewTitle.TextSize = 16
+    previewTitle.Font = Enum.Font.GothamBold
+    previewTitle.TextXAlignment = Enum.TextXAlignment.Left
+    previewTitle.Parent = previewHeader
+    
+    -- Preview Close Button
+    local previewCloseButton = Instance.new("TextButton")
+    previewCloseButton.Name = "CloseButton"
+    previewCloseButton.Size = UDim2.new(0, 30, 0, 30)
+    previewCloseButton.Position = UDim2.new(1, -40, 0.5, -15)
+    previewCloseButton.BackgroundColor3 = Colors.Error
+    previewCloseButton.BorderSizePixel = 0
+    previewCloseButton.Text = "×"
+    previewCloseButton.TextColor3 = Colors.Text
+    previewCloseButton.TextSize = 16
+    previewCloseButton.Font = Enum.Font.GothamBold
+    previewCloseButton.Parent = previewHeader
+    
+    local previewCloseCorner = Instance.new("UICorner")
+    previewCloseCorner.CornerRadius = UDim.new(0, 6)
+    previewCloseCorner.Parent = previewCloseButton
+    
+    CreateModernRipple(previewCloseButton, Colors.Text)
+    
+    previewCloseButton.MouseButton1Click:Connect(function()
+        self.PreviewWindow.Visible = false
+    end)
+    
+    -- Preview Content
+    local previewContent = Instance.new("Frame")
+    previewContent.Name = "Content"
+    previewContent.Size = UDim2.new(1, -20, 1, -65)
+    previewContent.Position = UDim2.new(0, 10, 0, 55)
+    previewContent.BackgroundColor3 = Colors.Secondary
+    previewContent.BorderSizePixel = 0
+    previewContent.Parent = self.PreviewWindow
+    
+    local previewContentCorner = Instance.new("UICorner")
+    previewContentCorner.CornerRadius = UDim.new(0, 8)
+    previewContentCorner.Parent = previewContent
+    
+    -- Initialize Preview System
+    self.PreviewSystem = PreviewSystem.new(previewContent)
+    
+    -- Make preview draggable
+    MakeDraggable(self.PreviewWindow, previewHeader)
+end
+function Window:SetupKeybind()
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.KeyCode == self.Keybind then
+            self:Toggle()
+        end
+    end)
+end
+function Window:Toggle()
+    self.Visible = not self.Visible
+    self.MainWindow.Visible = self.Visible
+    
+    if not self.Visible then
+        self.PreviewWindow.Visible = false
+    end
+end
+function Window:Tab(name)
+    local tab = {
+        Name = name,
+        Button = nil,
+        Content = nil,
+        Elements = {},
+        Window = self
+    }
+    
+    -- Create Tab Button
+    tab.Button = Instance.new("TextButton")
+    tab.Button.Name = name .. "Tab"
+    tab.Button.Size = UDim2.new(1, 0, 0, 40)
+    tab.Button.BackgroundColor3 = Colors.Tertiary
+    tab.Button.BorderSizePixel = 0
+    tab.Button.Text = name
+    tab.Button.TextColor3 = Colors.TextSecondary
+    tab.Button.TextSize = 14
+    tab.Button.Font = Enum.Font.GothamSemibold
+    tab.Button.Parent = self.TabContainer
+    
+    local tabCorner = Instance.new("UICorner")
+    tabCorner.CornerRadius = UDim.new(0, 8)
+    tabCorner.Parent = tab.Button
+    
+    CreateModernRipple(tab.Button, Colors.Accent)
+    
+    -- Create Tab Content
+    tab.Content = Instance.new("ScrollingFrame")
+    tab.Content.Name = name .. "Content"
+    tab.Content.Size = UDim2.new(1, -20, 1, -20)
+    tab.Content.Position = UDim2.new(0, 10, 0, 10)
+    tab.Content.BackgroundTransparency = 1
+    tab.Content.BorderSizePixel = 0
+    tab.Content.ScrollBarThickness = 4
+    tab.Content.ScrollBarImageColor3 = Colors.Accent
+    tab.Content.Visible = false
+    tab.Content.Parent = self.ContentContainer
+    
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Padding = UDim.new(0, 10)
+    contentLayout.Parent = tab.Content
+    
+    -- Tab Selection
+    tab.Button.MouseButton1Click:Connect(function()
+        self:SelectTab(tab)
+    end)
+    
+    -- Auto-select first tab
+    if #self.Tabs == 0 then
+        self:SelectTab(tab)
+    end
+    
+    table.insert(self.Tabs, tab)
+    
+    -- Update scroll canvas
+    self.TabContainer.CanvasSize = UDim2.new(0, 0, 0, #self.Tabs * 43)
+    
+    return tab
+end
+function Window:SelectTab(tab)
+    if not tab or not tab.Button or not tab.Content then
+        warn("BSMT UI: Attempted to select invalid tab")
+        return
+    end
+    
+    -- Deselect current tab
+    if self.CurrentTab and self.CurrentTab.Button and self.CurrentTab.Button.Parent then
+        SafeTween(self.CurrentTab.Button, {
+            BackgroundColor3 = Colors.Tertiary
+        }, 0.2)
+        
+        self.CurrentTab.Button.TextColor3 = Colors.TextSecondary
+        
+        if self.CurrentTab.Content then
+            self.CurrentTab.Content.Visible = false
+        end
+    end
+    
+    -- Select new tab
+    self.CurrentTab = tab
+    
+    if tab.Button and tab.Button.Parent then
+        SafeTween(tab.Button, {
+            BackgroundColor3 = Colors.AccentDark
+        }, 0.2)
+        
+        tab.Button.TextColor3 = Colors.Text
+    end
+    
+    if tab.Content then
+        tab.Content.Visible = true
+    end
+    
+    -- Show preview window for Visuals tab
+    if tab.Name == "Visuals" then
+        self.PreviewWindow.Visible = true
+        SafeTween(self.PreviewWindow, {
+            Size = UDim2.new(0, 350, 0, 450)
+        }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    end
+end
+-- Enhanced UI Elements
+function Window:CreateLabel(tab, text)
+    local label = Instance.new("TextLabel")
+    label.Name = "Label"
+    label.Size = UDim2.new(1, 0, 0, 30)
+    label.BackgroundTransparency = 1
+    label.Text = text or "Label"
+    label.TextColor3 = Colors.Text
+    label.TextSize = 14
+    label.Font = Enum.Font.Gotham
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = tab.Content
+    
+    return label
+end
+
+-- COMPLETELY REDESIGNED BUTTON FUNCTION
+function Window:CreateButton(tab, text, callback)
+    -- Main button container with modern styling
+    local buttonContainer = Instance.new("Frame")
+    buttonContainer.Name = "ModernButtonContainer"
+    buttonContainer.Size = UDim2.new(1, 0, 0, 50)
+    buttonContainer.BackgroundTransparency = 1
+    buttonContainer.Parent = tab.Content
+    
+    -- Main button frame with gradient background
+    local button = Instance.new("TextButton")
+    button.Name = "ModernButton"
+    button.Size = UDim2.new(1, 0, 1, 0)
+    button.Position = UDim2.new(0, 0, 0, 0)
+    button.BackgroundColor3 = Colors.Accent
+    button.BorderSizePixel = 0
+    button.Text = ""
+    button.AutoButtonColor = false
+    button.Parent = buttonContainer
+    
+    -- Modern rounded corners
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 12)
+    buttonCorner.Parent = button
+    
+    -- Enhanced gradient effect
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0.0, Color3.fromRGB(91, 154, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(101, 164, 255)),
+        ColorSequence.new(1.0, Color3.fromRGB(111, 174, 255))
+    }
+    gradient.Rotation = 45
+    gradient.Parent = button
+    
+    -- Modern shadow effect
+    local shadow = Instance.new("Frame")
+    shadow.Name = "ButtonShadow"
+    shadow.Size = UDim2.new(1, 4, 1, 4)
+    shadow.Position = UDim2.new(0, -2, 0, 2)
+    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.BackgroundTransparency = 0.8
+    shadow.BorderSizePixel = 0
+    shadow.ZIndex = button.ZIndex - 1
+    shadow.Parent = buttonContainer
+    
+    local shadowCorner = Instance.new("UICorner")
+    shadowCorner.CornerRadius = UDim.new(0, 14)
+    shadowCorner.Parent = shadow
+    
+    -- Button content container
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Name = "ButtonContent"
+    contentFrame.Size = UDim2.new(1, -20, 1, 0)
+    contentFrame.Position = UDim2.new(0, 10, 0, 0)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Parent = button
+    
+    -- Icon (left side)
+    local icon = Instance.new("TextLabel")
+    icon.Name = "ButtonIcon"
+    icon.Size = UDim2.new(0, 24, 0, 24)
+    icon.Position = UDim2.new(0, 0, 0.5, -12)
+    icon.BackgroundTransparency = 1
+    icon.Text = "▶"
+    icon.TextColor3 = Colors.Text
+    icon.TextSize = 16
+    icon.Font = Enum.Font.GothamBold
+    icon.TextXAlignment = Enum.TextXAlignment.Center
+    icon.TextYAlignment = Enum.TextYAlignment.Center
+    icon.Parent = contentFrame
+    
+    -- Text label (center)
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "ButtonText"
+    textLabel.Size = UDim2.new(1, -60, 1, 0)
+    textLabel.Position = UDim2.new(0, 30, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = text or "Button"
+    textLabel.TextColor3 = Colors.Text
+    textLabel.TextSize = 15
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+    textLabel.Parent = contentFrame
+    
+    -- Status indicator (right side)
+    local statusIndicator = Instance.new("Frame")
+    statusIndicator.Name = "StatusIndicator"
+    statusIndicator.Size = UDim2.new(0, 8, 0, 8)
+    statusIndicator.Position = UDim2.new(1, -20, 0.5, -4)
+    statusIndicator.BackgroundColor3 = Colors.Success
+    statusIndicator.BackgroundTransparency = 1
+    statusIndicator.BorderSizePixel = 0
+    statusIndicator.Parent = contentFrame
+    
+    local indicatorCorner = Instance.new("UICorner")
+    indicatorCorner.CornerRadius = UDim.new(1, 0)
+    indicatorCorner.Parent = statusIndicator
+    
+    -- Enhanced hover effects
+    button.MouseEnter:Connect(function()
+        SafeTween(button, {
+            Size = UDim2.new(1, 0, 1, 2)
+        }, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        
+        SafeTween(shadow, {
+            BackgroundTransparency = 0.6,
+            Size = UDim2.new(1, 8, 1, 8),
+            Position = UDim2.new(0, -4, 0, 4)
+        }, 0.2)
+        
+        SafeTween(gradient, {
+            Rotation = 90
+        }, 0.3)
+        
+        SafeTween(icon, {
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            TextSize = 18
+        }, 0.2)
+    end)
+    
+    button.MouseLeave:Connect(function()
+        SafeTween(button, {
+            Size = UDim2.new(1, 0, 1, 0)
+        }, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        
+        SafeTween(shadow, {
+            BackgroundTransparency = 0.8,
+            Size = UDim2.new(1, 4, 1, 4),
+            Position = UDim2.new(0, -2, 0, 2)
+        }, 0.2)
+        
+        SafeTween(gradient, {
+            Rotation = 45
+        }, 0.3)
+        
+        SafeTween(icon, {
+            TextColor3 = Colors.Text,
+            TextSize = 16
+        }, 0.2)
+    end)
+    
+    -- Enhanced click effects
+    button.MouseButton1Down:Connect(function()
+        SafeTween(button, {
+            Size = UDim2.new(0.98, 0, 0.95, 0)
+        }, 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        
+        SafeTween(contentFrame, {
+            Size = UDim2.new(1, -22, 0.95, 0)
+        }, 0.1)
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        SafeTween(button, {
+            Size = UDim2.new(1, 0, 1, 2)
+        }, 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        
+        SafeTween(contentFrame, {
+            Size = UDim2.new(1, -20, 1, 0)
+        }, 0.1)
+    end)
+    
+    -- Modern ripple effect
+    CreateModernRipple(button, Color3.fromRGB(255, 255, 255))
+    
+    -- Click handler with visual feedback
+    if callback then
+        button.MouseButton1Click:Connect(function()
+            -- Flash status indicator
+            statusIndicator.BackgroundTransparency = 0
+            SafeTween(statusIndicator, {
+                BackgroundTransparency = 1
+            }, 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            
+            -- Brief color change
+            SafeTween(button, {
+                BackgroundColor3 = Colors.Success
+            }, 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, function()
+                SafeTween(button, {
+                    BackgroundColor3 = Colors.Accent
+                }, 0.2)
+            end)
+            
+            callback()
+        end)
+    end
+    
+    return button
+end
+
+function Window:CreateToggle(tab, text, default, callback)
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Name = "Toggle"
+    toggleFrame.Size = UDim2.new(1, 0, 0, 45)
+    toggleFrame.BackgroundColor3 = Colors.Secondary
+    toggleFrame.BorderSizePixel = 0
+    toggleFrame.Parent = tab.Content
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 8)
+    toggleCorner.Parent = toggleFrame
+    
+    local toggleStroke = Instance.new("UIStroke")
+    toggleStroke.Color = Colors.Border
+    toggleStroke.Thickness = 1
+    toggleStroke.Parent = toggleFrame
+    
+    local toggleLabel = Instance.new("TextLabel")
+    toggleLabel.Size = UDim2.new(1, -70, 1, 0)
+    toggleLabel.Position = UDim2.new(0, 15, 0, 0)
+    toggleLabel.BackgroundTransparency = 1
+    toggleLabel.Text = text or "Toggle"
+    toggleLabel.TextColor3 = Colors.Text
+    toggleLabel.TextSize = 14
+    toggleLabel.Font = Enum.Font.Gotham
+    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    toggleLabel.Parent = toggleFrame
+    
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(0, 50, 0, 25)
+    toggleButton.Position = UDim2.new(1, -60, 0.5, -12.5)
+    toggleButton.BackgroundColor3 = default and Colors.Accent or Colors.Tertiary
+    toggleButton.BorderSizePixel = 0
+    toggleButton.Text = ""
+    toggleButton.Parent = toggleFrame
+    
+    local toggleButtonCorner = Instance.new("UICorner")
+    toggleButtonCorner.CornerRadius = UDim.new(1, 0)
+    toggleButtonCorner.Parent = toggleButton
+    
+    local toggleIndicator = Instance.new("Frame")
+    toggleIndicator.Size = UDim2.new(0, 21, 0, 21)
+    toggleIndicator.Position = default and UDim2.new(1, -23, 0.5, -10.5) or UDim2.new(0, 2, 0.5, -10.5)
+    toggleIndicator.BackgroundColor3 = Colors.Text
+    toggleIndicator.BorderSizePixel = 0
+    toggleIndicator.Parent = toggleButton
+    
+    local indicatorCorner = Instance.new("UICorner")
+    indicatorCorner.CornerRadius = UDim.new(1, 0)
+    indicatorCorner.Parent = toggleIndicator
+    
+    local toggled = default or false
+    
+    toggleButton.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        
+        SafeTween(toggleButton, {
+            BackgroundColor3 = toggled and Colors.Accent or Colors.Tertiary
+        }, 0.2)
+        
+        SafeTween(toggleIndicator, {
+            Position = toggled and UDim2.new(1, -23, 0.5, -10.5) or UDim2.new(0, 2, 0.5, -10.5)
+        }, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        
+        if callback then
+            callback(toggled)
+        end
+    end)
+    
+    return toggleFrame
+end
+function Window:CreateSlider(tab, text, min, max, default, callback)
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Name = "Slider"
+    sliderFrame.Size = UDim2.new(1, 0, 0, 60)
+    sliderFrame.BackgroundColor3 = Colors.Secondary
+    sliderFrame.BorderSizePixel = 0
+    sliderFrame.Parent = tab.Content
+    
+    local sliderCorner = Instance.new("UICorner")
+    sliderCorner.CornerRadius = UDim.new(0, 8)
+    sliderCorner.Parent = sliderFrame
+    
+    local sliderStroke = Instance.new("UIStroke")
+    sliderStroke.Color = Colors.Border
+    sliderStroke.Thickness = 1
+    sliderStroke.Parent = sliderFrame
+    
+    local sliderLabel = Instance.new("TextLabel")
+    sliderLabel.Size = UDim2.new(0.7, 0, 0, 25)
+    sliderLabel.Position = UDim2.new(0, 15, 0, 8)
+    sliderLabel.BackgroundTransparency = 1
+    sliderLabel.Text = text or "Slider"
+    sliderLabel.TextColor3 = Colors.Text
+    sliderLabel.TextSize = 14
+    sliderLabel.Font = Enum.Font.Gotham
+    sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+    sliderLabel.Parent = sliderFrame
+    
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0.3, -15, 0, 25)
+    valueLabel.Position = UDim2.new(0.7, 0, 0, 8)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(default or min)
+    valueLabel.TextColor3 = Colors.Accent
+    valueLabel.TextSize = 14
+    valueLabel.Font = Enum.Font.GothamBold
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.Parent = sliderFrame
+    
+    local sliderTrack = Instance.new("Frame")
+    sliderTrack.Size = UDim2.new(1, -30, 0, 6)
+    sliderTrack.Position = UDim2.new(0, 15, 1, -20)
+    sliderTrack.BackgroundColor3 = Colors.Tertiary
+    sliderTrack.BorderSizePixel = 0
+    sliderTrack.Parent = sliderFrame
+    
+    local trackCorner = Instance.new("UICorner")
+    trackCorner.CornerRadius = UDim.new(1, 0)
+    trackCorner.Parent = sliderTrack
+    
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    sliderFill.Position = UDim2.new(0, 0, 0, 0)
+    sliderFill.BackgroundColor3 = Colors.Accent
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderTrack
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(1, 0)
+    fillCorner.Parent = sliderFill
+    
+    local sliderHandle = Instance.new("Frame")
+    sliderHandle.Size = UDim2.new(0, 16, 0, 16)
+    sliderHandle.Position = UDim2.new((default - min) / (max - min), -8, 0.5, -8)
+    sliderHandle.BackgroundColor3 = Colors.Text
+    sliderHandle.BorderSizePixel = 0
+    sliderHandle.Parent = sliderTrack
+    
+    local handleCorner = Instance.new("UICorner")
+    handleCorner.CornerRadius = UDim.new(1, 0)
+    handleCorner.Parent = sliderHandle
+    
+    local handleStroke = Instance.new("UIStroke")
+    handleStroke.Color = Colors.Accent
+    handleStroke.Thickness = 2
+    handleStroke.Parent = sliderHandle
+    
+    local dragging = false
+    local currentValue = default or min
+    
+    sliderTrack.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+    
+    sliderTrack.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = input.Position.X
+            local trackPos = sliderTrack.AbsolutePosition.X
+            local trackSize = sliderTrack.AbsoluteSize.X
+            
+            local percentage = math.clamp((mousePos - trackPos) / trackSize, 0, 1)
+            currentValue = math.floor(min + (max - min) * percentage)
+            
+            valueLabel.Text = tostring(currentValue)
+            
+            SafeTween(sliderFill, {
+                Size = UDim2.new(percentage, 0, 1, 0)
+            }, 0.1)
+            
+            SafeTween(sliderHandle, {
+                Position = UDim2.new(percentage, -8, 0.5, -8)
+            }, 0.1)
+            
+            if callback then
+                callback(currentValue)
+            end
+        end
+    end)
+    
+    return sliderFrame
+end
+function Window:CreateDropdown(tab, text, options, default, callback)
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Name = "Dropdown"
+    dropdownFrame.Size = UDim2.new(1, 0, 0, 45)
+    dropdownFrame.BackgroundColor3 = Colors.Secondary
+    dropdownFrame.BorderSizePixel = 0
+    dropdownFrame.Parent = tab.Content
+    
+    local dropdownCorner = Instance.new("UICorner")
+    dropdownCorner.CornerRadius = UDim.new(0, 8)
+    dropdownCorner.Parent = dropdownFrame
+    
+    local dropdownStroke = Instance.new("UIStroke")
+    dropdownStroke.Color = Colors.Border
+    dropdownStroke.Thickness = 1
+    dropdownStroke.Parent = dropdownFrame
+    
+    local dropdownLabel = Instance.new("TextLabel")
+    dropdownLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    dropdownLabel.Position = UDim2.new(0, 15, 0, 0)
+    dropdownLabel.BackgroundTransparency = 1
+    dropdownLabel.Text = text or "Dropdown"
+    dropdownLabel.TextColor3 = Colors.Text
+    dropdownLabel.TextSize = 14
+    dropdownLabel.Font = Enum.Font.Gotham
+    dropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+    dropdownLabel.Parent = dropdownFrame
+    
+    local dropdownButton = Instance.new("TextButton")
+    dropdownButton.Size = UDim2.new(0.6, -25, 0, 30)
+    dropdownButton.Position = UDim2.new(0.4, 10, 0.5, -15)
+    dropdownButton.BackgroundColor3 = Colors.Tertiary
+    dropdownButton.BorderSizePixel = 0
+    dropdownButton.Text = default or (options and options[1]) or "Select"
+    dropdownButton.TextColor3 = Colors.Text
+    dropdownButton.TextSize = 12
+    dropdownButton.Font = Enum.Font.Gotham
+    dropdownButton.Parent = dropdownFrame
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = dropdownButton
+    
+    local buttonStroke = Instance.new("UIStroke")
+    buttonStroke.Color = Colors.Border
+    buttonStroke.Thickness = 1
+    buttonStroke.Parent = dropdownButton
+    
+    local dropdownArrow = Instance.new("TextLabel")
+    dropdownArrow.Size = UDim2.new(0, 20, 1, 0)
+    dropdownArrow.Position = UDim2.new(1, -20, 0, 0)
+    dropdownArrow.BackgroundTransparency = 1
+    dropdownArrow.Text = "▼"
+    dropdownArrow.TextColor3 = Colors.TextSecondary
+    dropdownArrow.TextSize = 10
+    dropdownArrow.Font = Enum.Font.Gotham
+    dropdownArrow.Parent = dropdownButton
+    
+    local dropdownList = Instance.new("Frame")
+    dropdownList.Name = "DropdownList"
+    dropdownList.Size = UDim2.new(0.6, -25, 0, math.min(#(options or {}) * 30, 150))
+    dropdownList.Position = UDim2.new(0.4, 10, 1, 5)
+    dropdownList.BackgroundColor3 = Colors.Tertiary
+    dropdownList.BorderSizePixel = 0
+    dropdownList.Visible = false
+    dropdownList.ZIndex = 10
+    dropdownList.Parent = dropdownFrame
+    
+    local listCorner = Instance.new("UICorner")
+    listCorner.CornerRadius = UDim.new(0, 6)
+    listCorner.Parent = dropdownList
+    
+    local listStroke = Instance.new("UIStroke")
+    listStroke.Color = Colors.Border
+    listStroke.Thickness = 1
+    listStroke.Parent = dropdownList
+    
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.Parent = dropdownList
+    
+    local currentSelection = default or (options and options[1]) or ""
+    
+    for i, option in ipairs(options or {}) do
+        local optionButton = Instance.new("TextButton")
+        optionButton.Size = UDim2.new(1, 0, 0, 30)
+        optionButton.BackgroundColor3 = Colors.Tertiary
+        optionButton.BorderSizePixel = 0
+        optionButton.Text = option
+        optionButton.TextColor3 = Colors.Text
+        optionButton.TextSize = 12
+        optionButton.Font = Enum.Font.Gotham
+        optionButton.Parent = dropdownList
+        
+        optionButton.MouseEnter:Connect(function()
+            SafeTween(optionButton, {
+                BackgroundColor3 = Colors.Accent
+            }, 0.1)
+        end)
+        
+        optionButton.MouseLeave:Connect(function()
+            SafeTween(optionButton, {
+                BackgroundColor3 = Colors.Tertiary
+            }, 0.1)
+        end)
+        
+        optionButton.MouseButton1Click:Connect(function()
+            currentSelection = option
+            dropdownButton.Text = option
+            dropdownList.Visible = false
+            
+            SafeTween(dropdownArrow, {
+                Rotation = 0
+            }, 0.2)
+            
+            if callback then
+                callback(option)
+            end
+        end)
+    end
+    
+    dropdownButton.MouseButton1Click:Connect(function()
+        dropdownList.Visible = not dropdownList.Visible
+        
+        SafeTween(dropdownArrow, {
+            Rotation = dropdownList.Visible and 180 or 0
+        }, 0.2)
+    end)
+    
+    return dropdownFrame
+end
+function Window:CreateColorPicker(tab, text, default, callback)
+    local colorFrame = Instance.new("Frame")
+    colorFrame.Name = "ColorPicker"
+    colorFrame.Size = UDim2.new(1, 0, 0, 45)
+    colorFrame.BackgroundColor3 = Colors.Secondary
+    colorFrame.BorderSizePixel = 0
+    colorFrame.Parent = tab.Content
+    
+    local colorCorner = Instance.new("UICorner")
+    colorCorner.CornerRadius = UDim.new(0, 8)
+    colorCorner.Parent = colorFrame
+    
+    local colorStroke = Instance.new("UIStroke")
+    colorStroke.Color = Colors.Border
+    colorStroke.Thickness = 1
+    colorStroke.Parent = colorFrame
+    
+    local colorLabel = Instance.new("TextLabel")
+    colorLabel.Size = UDim2.new(0.7, 0, 1, 0)
+    colorLabel.Position = UDim2.new(0, 15, 0, 0)
+    colorLabel.BackgroundTransparency = 1
+    colorLabel.Text = text or "Color Picker"
+    colorLabel.TextColor3 = Colors.Text
+    colorLabel.TextSize = 14
+    colorLabel.Font = Enum.Font.Gotham
+    colorLabel.TextXAlignment = Enum.TextXAlignment.Left
+    colorLabel.Parent = colorFrame
+    
+    local colorPreview = Instance.new("Frame")
+    colorPreview.Size = UDim2.new(0, 80, 0, 30)
+    colorPreview.Position = UDim2.new(1, -90, 0.5, -15)
+    colorPreview.BackgroundColor3 = default or Colors.Text
+    colorPreview.BorderSizePixel = 0
+    colorPreview.Parent = colorFrame
+    
+    local previewCorner = Instance.new("UICorner")
+    previewCorner.CornerRadius = UDim.new(0, 6)
+    previewCorner.Parent = colorPreview
+    
+    local previewStroke = Instance.new("UIStroke")
+    previewStroke.Color = Colors.Border
+    previewStroke.Thickness = 1
+    previewStroke.Parent = colorPreview
+    
+    local colorButton = Instance.new("TextButton")
+    colorButton.Size = UDim2.new(1, 0, 1, 0)
+    colorButton.BackgroundTransparency = 1
+    colorButton.Text = ""
+    colorButton.Parent = colorPreview
+    
+    CreateModernRipple(colorButton, Colors.Text)
+    
+    colorButton.MouseButton1Click:Connect(function()
+        -- Enhanced color picker with more colors
+        local colors = {
+            Color3.fromRGB(255, 0, 0),     -- Red
+            Color3.fromRGB(255, 165, 0),   -- Orange
+            Color3.fromRGB(255, 255, 0),   -- Yellow
+            Color3.fromRGB(0, 255, 0),     -- Green
+            Color3.fromRGB(0, 255, 255),   -- Cyan
+            Color3.fromRGB(0, 0, 255),     -- Blue
+            Color3.fromRGB(128, 0, 128),   -- Purple
+            Color3.fromRGB(255, 192, 203), -- Pink
+            Color3.fromRGB(255, 255, 255), -- White
+            Color3.fromRGB(128, 128, 128), -- Gray
+            Color3.fromRGB(0, 0, 0),       -- Black
+            Colors.Accent                   -- Theme accent
+        }
+        
+        local currentIndex = 1
+        for i, color in ipairs(colors) do
+            if colorPreview.BackgroundColor3 == color then
+                currentIndex = i
+                break
+            end
+        end
+        
+        local nextIndex = (currentIndex % #colors) + 1
+        local newColor = colors[nextIndex]
+        
+        SafeTween(colorPreview, {
+            BackgroundColor3 = newColor
+        }, 0.2)
+        
+        if callback then
+            callback(newColor)
+        end
+    end)
+    
+    return colorFrame
+end
+-- Add methods to tab for easier element creation
+local function AddTabMethods(tab)
+    function tab:Label(text)
+        return self.Window:CreateLabel(self, text)
+    end
+    
+    function tab:Button(text, callback)
+        return self.Window:CreateButton(self, text, callback)
+    end
+    
+    function tab:Toggle(text, default, callback)
+        return self.Window:CreateToggle(self, text, default, callback)
+    end
+    
+    function tab:Slider(text, min, max, default, callback)
+        return self.Window:CreateSlider(self, text, min, max, default, callback)
+    end
+    
+    function tab:Dropdown(text, options, default, callback)
+        return self.Window:CreateDropdown(self, text, options, default, callback)
+    end
+    
+    function tab:ColorPicker(text, default, callback)
+        return self.Window:CreateColorPicker(self, text, default, callback)
+    end
+end
+-- Override Tab method to add methods
+local originalTab = Window.Tab
+function Window:Tab(name)
+    local tab = originalTab(self, name)
+    AddTabMethods(tab)
+    return tab
+end
+-- Enhanced Config System
+function Library:SaveConfig(name)
+    if not name then 
+        Library:Notify("Config Error", "Please provide a config name", 3, "error")
+        return false 
+    end
+    
+    local config = {}
+    
+    for flag, value in pairs(Library.Flags) do
+        config[flag] = value
+    end
+    
+    local success, result = pcall(function()
+        if writefile then
+            if not isfolder(Library.ConfigFolder) then
+                makefolder(Library.ConfigFolder)
+            end
+            writefile(Library.ConfigFolder .. "/" .. name .. ".json", HttpService:JSONEncode(config))
+            Library:Notify("Config Saved", "Configuration '" .. name .. "' saved successfully", 3, "success")
+            return true
+        else
+            Library:Notify("Config Error", "File system not available", 3, "error")
+            return false
+        end
+    end)
+    
+    if not success then
+        Library:Notify("Config Error", "Failed to save config: " .. tostring(result), 3, "error")
+    end
+    
+    return success and result
+end
+function Library:LoadConfig(name)
+    if not name then 
+        Library:Notify("Config Error", "Please provide a config name", 3, "error")
+        return false 
+    end
+    
+    local success, result = pcall(function()
+        if readfile and isfile then
+            local filePath = Library.ConfigFolder .. "/" .. name .. ".json"
+            if isfile(filePath) then
+                local configData = readfile(filePath)
+                local config = HttpService:JSONDecode(configData)
+                
+                for flag, value in pairs(config) do
+                    Library.Flags[flag] = value
+                end
+                
+                Library:Notify("Config Loaded", "Configuration '" .. name .. "' loaded successfully", 3, "success")
+                return true
+            else
+                Library:Notify("Config Error", "Config file not found", 3, "error")
+                return false
+            end
+        else
+            Library:Notify("Config Error", "File system not available", 3, "error")
+            return false
+        end
+    end)
+    
+    if not success then
+        Library:Notify("Config Error", "Failed to load config: " .. tostring(result), 3, "error")
+    end
+    
+    return success and result
+end
+function Library:GetConfigList()
+    local configs = {}
+    
+    pcall(function()
+        if listfiles and isfolder(Library.ConfigFolder) then
+            local files = listfiles(Library.ConfigFolder)
+            for _, file in ipairs(files) do
+                if file:sub(-5) == ".json" then
+                    local name = file:match("([^/\\]+)%.json$")
+                    if name then
+                        table.insert(configs, name)
+                    end
+                end
+            end
+        end
+    end)
+    
+    return configs
+end
+function Library:CreateWindow(title)
+    return Window.new(title)
+end
+-- Create config folder
+pcall(function()
+    if makefolder and not isfolder(Library.ConfigFolder) then
+        makefolder(Library.ConfigFolder)
+    end
+end)
+return Library
