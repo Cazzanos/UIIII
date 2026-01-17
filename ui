@@ -1090,9 +1090,10 @@ function Window:CreateButton(tab, text, callback)
     end
 
     return button
-end    
-    return button
 end
+
+    return button
+end    
 
 function Window:CreateToggle(tab, text, default, callback)
     local toggleFrame = Instance.new("Frame")
