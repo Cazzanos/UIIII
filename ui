@@ -179,44 +179,56 @@ end
 
 function PreviewSystem:LoadCharacter()
     -- Wait for character to load
+    task.wait(1) -- Give time for character to fully load
+    
     if not LocalPlayer.Character then
         LocalPlayer.CharacterAdded:Wait()
+        task.wait(0.5)
     end
     
     local character = LocalPlayer.Character
     if not character then return end
     
-    -- Wait for character to fully load
+    -- Wait for essential parts
+    local hrp = character:WaitForChild("HumanoidRootPart", 5)
     local humanoid = character:WaitForChild("Humanoid", 5)
-    if not humanoid then return end
     
-    -- Clone character
-    local success, clone = pcall(function()
-        return character:Clone()
+    if not hrp or not humanoid then 
+        warn("Character not fully loaded for preview")
+        return 
+    end
+    
+    -- Clone character safely
+    local success, result = pcall(function()
+        local clone = character:Clone()
+        
+        -- Remove scripts and unnecessary parts
+        pcall(function()
+            for _, v in pairs(clone:GetDescendants()) do
+                if v:IsA("Script") or v:IsA("LocalScript") or v:IsA("ModuleScript") then
+                    pcall(function() v:Destroy() end)
+                end
+            end
+        end)
+        
+        return clone
     end)
     
-    if not success or not clone then 
+    if not success or not result then 
         warn("Failed to clone character for preview")
         return 
     end
     
-    -- Remove scripts and unnecessary parts
-    for _, v in pairs(clone:GetDescendants()) do
-        if v:IsA("Script") or v:IsA("LocalScript") or v:IsA("ModuleScript") then
-            v:Destroy()
-        end
-    end
-    
-    clone.Parent = self.ViewportFrame
-    self.Character = clone
+    result.Parent = self.ViewportFrame
+    self.Character = result
     
     -- Position camera
-    local hrp = clone:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        self.ViewportCamera.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 2, 5), hrp.Position)
+    local cloneHrp = result:FindFirstChild("HumanoidRootPart")
+    if cloneHrp then
+        self.ViewportCamera.CFrame = CFrame.new(cloneHrp.Position + Vector3.new(0, 2, 5), cloneHrp.Position)
         
         -- Make character face camera
-        hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(180), 0)
+        cloneHrp.CFrame = CFrame.new(cloneHrp.Position) * CFrame.Angles(0, math.rad(180), 0)
     end
 end
 
@@ -648,8 +660,14 @@ end
 -- UI Elements
 
 function Window:Toggle(name, default, callback)
+    -- Ensure self.Content exists
+    if not self.Content then
+        warn("Toggle called but Content container not found")
+        return
+    end
+    
     local toggle = Instance.new("Frame")
-    toggle.Name = "Toggle_" .. name
+    toggle.Name = "Toggle_" .. tostring(name)
     toggle.Size = UDim2.new(1, 0, 0, 40)
     toggle.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
     toggle.BorderSizePixel = 0
@@ -746,8 +764,14 @@ function Window:Toggle(name, default, callback)
 end
 
 function Window:Slider(name, min, max, default, callback)
+    -- Ensure self.Content exists
+    if not self.Content then
+        warn("Slider called but Content container not found")
+        return
+    end
+    
     local slider = Instance.new("Frame")
-    slider.Name = "Slider_" .. name
+    slider.Name = "Slider_" .. tostring(name)
     slider.Size = UDim2.new(1, 0, 0, 50)
     slider.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
     slider.BorderSizePixel = 0
@@ -853,9 +877,15 @@ function Window:Slider(name, min, max, default, callback)
 end
 
 function Window:Button(name, callback)
+    -- Ensure self.Content exists
+    if not self.Content then
+        warn("Button called but Content container not found")
+        return
+    end
+    
     local button = Instance.new("TextButton")
-    button.Name = "Button_" .. name
-    button.Text = name
+    button.Name = "Button_" .. tostring(name)
+    button.Text = tostring(name)
     button.Font = Enum.Font.GothamSemibold
     button.TextSize = 13
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -888,8 +918,14 @@ function Window:Button(name, callback)
 end
 
 function Window:Dropdown(name, options, default, callback)
+    -- Ensure self.Content exists
+    if not self.Content then
+        warn("Dropdown called but Content container not found")
+        return
+    end
+    
     local dropdown = Instance.new("Frame")
-    dropdown.Name = "Dropdown_" .. name
+    dropdown.Name = "Dropdown_" .. tostring(name)
     dropdown.Size = UDim2.new(1, 0, 0, 40)
     dropdown.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
     dropdown.BorderSizePixel = 0
@@ -1029,8 +1065,14 @@ function Window:Dropdown(name, options, default, callback)
 end
 
 function Window:ColorPicker(name, default, callback)
+    -- Ensure self.Content exists
+    if not self.Content then
+        warn("ColorPicker called but Content container not found")
+        return
+    end
+    
     local colorPicker = Instance.new("Frame")
-    colorPicker.Name = "ColorPicker_" .. name
+    colorPicker.Name = "ColorPicker_" .. tostring(name)
     colorPicker.Size = UDim2.new(1, 0, 0, 40)
     colorPicker.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
     colorPicker.BorderSizePixel = 0
