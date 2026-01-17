@@ -973,62 +973,124 @@ end
 function Window:CreateLabel(tab, text)
     local label = Instance.new("TextLabel")
     label.Name = "Label"
-    label.Size = UDim2.new(1, 0, 0, 30)
+    label.Size = UDim2.new(1, 0, 0, 35)
     label.BackgroundTransparency = 1
     label.Text = text or "Label"
     label.TextColor3 = Colors.Text
-    label.TextSize = 14
-    label.Font = Enum.Font.Gotham
+    label.TextSize = 15
+    label.Font = Enum.Font.GothamSemibold
     label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.TextTransparency = 0.1
     label.Parent = tab.Content
-    
+
+    -- Add text stroke for better readability
+    local textStroke = Instance.new("UIStroke")
+    textStroke.Thickness = 0.5
+    textStroke.Transparency = 0.8
+    textStroke.Color = Color3.fromRGB(0, 0, 0)
+    textStroke.Parent = label
+
+    -- Add subtle fade-in animation
+    label.TextTransparency = 1
+    spawn(function()
+        SafeTween(label, {TextTransparency = 0.1}, 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    end)
+
     return label
 end
-
 function Window:CreateButton(tab, text, callback)
     local button = Instance.new("TextButton")
     button.Name = "Button"
-    button.Size = UDim2.new(1, 0, 0, 40)
+    button.Size = UDim2.new(1, 0, 0, 45)
     button.BackgroundColor3 = Colors.Accent
     button.BorderSizePixel = 0
     button.Text = text or "Button"
     button.TextColor3 = Colors.Text
-    button.TextSize = 14
+    button.TextSize = 15
     button.Font = Enum.Font.GothamBold
     button.Parent = tab.Content
-    
+
+    -- Add corner rounding
     local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.CornerRadius = UDim.new(0, 10)
     buttonCorner.Parent = button
-    
+
+    -- Add stroke/border
     local buttonStroke = Instance.new("UIStroke")
     buttonStroke.Color = Colors.Border
-    buttonStroke.Thickness = 1
+    buttonStroke.Thickness = 1.5
     buttonStroke.Parent = button
-    
+
+    -- Add shadow effect
+    local shadow = Instance.new("Frame")
+    shadow.Name = "Shadow"
+    shadow.Size = UDim2.new(1, 0, 0, 45)
+    shadow.Position = UDim2.new(0, 0, 0, 3)
+    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.BackgroundTransparency = 0.8
+    shadow.BorderSizePixel = 0
+    shadow.ZIndex = button.ZIndex - 1
+    shadow.Parent = tab.Content
+
+    local shadowCorner = Instance.new("UICorner")
+    shadowCorner.CornerRadius = UDim.new(0, 10)
+    shadowCorner.Parent = shadow
+
+    -- Position shadow behind button
+    button:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+        shadow.Position = UDim2.new(0, button.AbsolutePosition.X - tab.Content.AbsolutePosition.X, 0, button.AbsolutePosition.Y - tab.Content.AbsolutePosition.Y + 3)
+    end)
+
+    -- Add ripple effect
     CreateRipple(button, Colors.Text)
-    
-    -- Hover effects
+
+    -- Enhanced hover effects with gradient
     button.MouseEnter:Connect(function()
         SafeTween(button, {
             BackgroundColor3 = Color3.fromRGB(
-                math.min(255, Colors.Accent.R * 255 + 20),
-                math.min(255, Colors.Accent.G * 255 + 20),
-                math.min(255, Colors.Accent.B * 255 + 20)
+                math.min(255, Colors.Accent.R * 255 + 30),
+                math.min(255, Colors.Accent.G * 255 + 30),
+                math.min(255, Colors.Accent.B * 255 + 30)
             )
         }, 0.2)
+
+        -- Lift effect
+        SafeTween(button, {Position = UDim2.new(0, 0, 0, -2)}, 0.2)
+        SafeTween(shadow, {BackgroundTransparency = 0.9}, 0.2)
     end)
-    
+
     button.MouseLeave:Connect(function()
         SafeTween(button, {
             BackgroundColor3 = Colors.Accent
         }, 0.2)
+
+        -- Return to original position
+        SafeTween(button, {Position = UDim2.new(0, 0, 0, 0)}, 0.2)
+        SafeTween(shadow, {BackgroundTransparency = 0.8}, 0.2)
     end)
-    
+
+    -- Click effect
+    button.MouseButton1Down:Connect(function()
+        SafeTween(button, {Size = UDim2.new(1, 0, 0, 42)}, 0.1)
+    end)
+
+    button.MouseButton1Up:Connect(function()
+        SafeTween(button, {Size = UDim2.new(1, 0, 0, 45)}, 0.1)
+    end)
+
     if callback then
-        button.MouseButton1Click:Connect(callback)
+        button.MouseButton1Click:Connect(function()
+            -- Add click feedback
+            SafeTween(button, {BackgroundTransparency = 0.3}, 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, function()
+                SafeTween(button, {BackgroundTransparency = 0}, 0.1)
+            end)
+            callback()
+        end)
     end
-    
+
+    return button
+end    
     return button
 end
 
