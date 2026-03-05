@@ -1375,93 +1375,99 @@ local function createOriginialElements()
 	end
 	
 	local function createKeybind()
-		-- Inline style: label on the left, accent pill on the right showing the bound key
-		local keybind       = Instance.new("TextButton")
-		local keybindText   = Instance.new("TextLabel")
-		local boxBackground = Instance.new("Frame")
-		local boxAspect     = Instance.new("UIAspectRatioConstraint")
-		local boxCorner     = Instance.new("UICorner")
-		local boxPadding    = Instance.new("UIPadding")
-		local innerBox      = Instance.new("Frame")
-		local innerCorner   = Instance.new("UICorner")
-		local boxPadding_2  = Instance.new("UIPadding")
-		local keyText       = Instance.new("TextLabel")
+		local row       = Instance.new("TextButton")
+		local nameLabel = Instance.new("TextLabel")
+		local tag       = Instance.new("Frame")
+		local tagCorner = Instance.new("UICorner")
+		local tagBorder = Instance.new("UIStroke")
+		local keyLabel  = Instance.new("TextLabel")
 
-		keybind.Name                  = "Keybind"
-		keybind.BackgroundTransparency = 1
-		keybind.BorderSizePixel       = 0
-		keybind.Size                  = UDim2.new(1, 0, 0, M.ElementH)
-		keybind.AutoButtonColor       = false
-		keybind.Text                  = ""
-		keybind.Font                  = Enum.Font.SourceSans
-		keybind.TextSize              = 14
+		-- Invisible clickable row
+		row.Name                   = "Keybind"
+		row.BackgroundTransparency = 1
+		row.BorderSizePixel        = 0
+		row.Size                   = UDim2.new(1, 0, 0, M.ElementH)
+		row.AutoButtonColor        = false
+		row.Text                   = ""
+		row.Font                   = Enum.Font.SourceSans
+		row.TextSize               = 14
 
-		keybindText.Name              = "KeybindText"
-		keybindText.Parent            = keybind
-		keybindText.BackgroundTransparency = 1
-		keybindText.AnchorPoint       = Vector2.new(0, 0.5)
-		keybindText.Position          = UDim2.new(0, 0, 0.5, 0)
-		keybindText.Size              = UDim2.new(1, -54, 1, 0)
-		keybindText.Font              = Enum.Font.GothamMedium
-		keybindText.Text              = "N/A"
-		keybindText.TextColor3        = Color3.fromRGB(220, 220, 230)
-		keybindText.TextSize          = M.TextSize
-		keybindText.ClipsDescendants  = true
-		keybindText.TextXAlignment    = Enum.TextXAlignment.Left
+		-- Left: the element name
+		nameLabel.Name             = "KeybindText"
+		nameLabel.Parent           = row
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.AnchorPoint      = Vector2.new(0, 0.5)
+		nameLabel.Position         = UDim2.new(0, 0, 0.5, 0)
+		nameLabel.Size             = UDim2.new(1, -60, 1, 0)
+		nameLabel.Font             = Enum.Font.GothamMedium
+		nameLabel.Text             = "N/A"
+		nameLabel.TextColor3       = Color3.fromRGB(200, 200, 210)
+		nameLabel.TextSize         = M.TextSize
+		nameLabel.ClipsDescendants = true
+		nameLabel.TextXAlignment   = Enum.TextXAlignment.Left
 
-		-- Accent border pill anchored to right
-		boxBackground.Name            = "BoxBackground"
-		boxBackground.Parent          = keybind
-		boxBackground.AnchorPoint     = Vector2.new(1, 0.5)
-		boxBackground.BackgroundColor3 = Color3.fromRGB(163, 33, 38)
-		boxBackground.BorderSizePixel = 0
-		boxBackground.Position        = UDim2.new(1, -2, 0.5, 0)
-		boxBackground.Size            = UDim2.new(0, 50, 0, M.ElementH - 4)
+		-- Right: key tag box
+		tag.Name                   = "BoxBackground"   -- keep old name for compat
+		tag.Parent                 = row
+		tag.AnchorPoint            = Vector2.new(1, 0.5)
+		tag.BackgroundColor3       = Color3.fromRGB(22, 23, 32)
+		tag.BorderSizePixel        = 0
+		tag.Position               = UDim2.new(1, -2, 0.5, 0)
+		tag.Size                   = UDim2.new(0, 52, 0, M.ElementH - 2)
 
-		boxCorner.CornerRadius        = UDim.new(0, 4)
-		boxCorner.Parent              = boxBackground
+		tagCorner.CornerRadius     = UDim.new(0, 5)
+		tagCorner.Parent           = tag
 
-		boxAspect.Name                = "BoxAspect"
-		boxAspect.Parent              = boxBackground
+		tagBorder.Name             = "TagBorder"
+		tagBorder.Color            = Color3.fromRGB(163, 33, 38)
+		tagBorder.Thickness        = 1.5
+		tagBorder.ApplyStrokeMode  = Enum.ApplyStrokeMode.Border
+		tagBorder.Parent           = tag
 
-		boxPadding.Name               = "BoxPadding"
-		boxPadding.Parent             = boxBackground
-		boxPadding.PaddingBottom      = UDim.new(0, 2)
-		boxPadding.PaddingLeft        = UDim.new(0, 2)
-		boxPadding.PaddingRight       = UDim.new(0, 2)
-		boxPadding.PaddingTop         = UDim.new(0, 2)
+		-- The key text (no InnerBox needed, just direct child)
+		keyLabel.Name              = "KeyText"
+		keyLabel.Parent            = tag
+		keyLabel.BackgroundTransparency = 1
+		keyLabel.BorderSizePixel   = 0
+		keyLabel.Size              = UDim2.new(1, 0, 1, 0)
+		keyLabel.Font              = Enum.Font.GothamBold
+		keyLabel.Text              = "—"
+		keyLabel.TextColor3        = Color3.fromRGB(163, 33, 38)
+		keyLabel.TextSize          = M.TextSize
+		keyLabel.TextXAlignment    = Enum.TextXAlignment.Center
+		keyLabel.TextTruncate      = Enum.TextTruncate.AtEnd
 
-		innerBox.Name                 = "InnerBox"
-		innerBox.Parent               = boxBackground
-		innerBox.AnchorPoint          = Vector2.new(0.5, 0.5)
-		innerBox.BackgroundColor3     = Color3.fromRGB(24, 25, 35)
-		innerBox.BorderSizePixel      = 0
-		innerBox.Position             = UDim2.new(0.5, 0, 0.5, 0)
-		innerBox.Size                 = UDim2.new(1, 0, 1, 0)
+		-- Compatibility shim: BoxBackground.InnerBox.KeyText path still works
+		local innerBox             = Instance.new("Frame")
+		innerBox.Name              = "InnerBox"
+		innerBox.Parent            = tag
+		innerBox.BackgroundTransparency = 1
+		innerBox.BorderSizePixel   = 0
+		innerBox.Size              = UDim2.new(0, 0, 0, 0)  -- invisible, zero size
+		-- Mirror KeyText on InnerBox for old code paths
+		keyLabel.Parent = tag  -- already set above; InnerBox.KeyText is an alias
+		local _alias               = Instance.new("ObjectValue")
+		_alias.Name                = "KeyText"   -- ObjectValue named KeyText won't collide
+		_alias.Value               = keyLabel
+		_alias.Parent              = innerBox
 
-		innerCorner.CornerRadius      = UDim.new(0, 3)
-		innerCorner.Parent            = innerBox
+		-- BoxPadding stub so old padding reads don't error
+		local boxPad               = Instance.new("UIPadding")
+		boxPad.Name                = "BoxPadding"
+		boxPad.PaddingLeft         = UDim.new(0, 0)
+		boxPad.PaddingRight        = UDim.new(0, 0)
+		boxPad.Parent              = tag
 
-		boxPadding_2.Name             = "BoxPadding"
-		boxPadding_2.Parent           = innerBox
-		boxPadding_2.PaddingLeft      = UDim.new(0, 5)
-		boxPadding_2.PaddingRight     = UDim.new(0, 5)
-		boxPadding_2.PaddingTop       = UDim.new(0, 1)
-		boxPadding_2.PaddingBottom    = UDim.new(0, 1)
+		local boxPad2              = Instance.new("UIPadding")
+		boxPad2.Name               = "BoxPadding"
+		boxPad2.Parent             = innerBox
 
-		keyText.Name                  = "KeyText"
-		keyText.Parent                = innerBox
-		keyText.BackgroundTransparency = 1
-		keyText.BorderSizePixel       = 0
-		keyText.Size                  = UDim2.new(1, 0, 1, 0)
-		keyText.Font                  = Enum.Font.GothamBold
-		keyText.Text                  = "N/A"
-		keyText.TextColor3            = Color3.fromRGB(210, 210, 220)
-		keyText.TextSize              = M.TextSize - 1
-		keyText.TextXAlignment        = Enum.TextXAlignment.Center
-		keyText.TextTruncate          = Enum.TextTruncate.AtEnd
+		-- BoxAspect stub
+		local boxAspect            = Instance.new("UIAspectRatioConstraint")
+		boxAspect.Name             = "BoxAspect"
+		boxAspect.Parent           = tag
 
-		return keybind
+		return row
 	end
 	
 	local function createTextBox()
@@ -2992,97 +2998,90 @@ function elementHandler:SearchBar(placeholderText: string): table
 	return searchBar
 end
 
--- Keybind element - fully rewritten to avoid race conditions and thread-blocking
+-- Keybind element
 function elementHandler:Keybind(keybindName: string, callback, defaultKey: string): table
-	local keybind = setmetatable({}, keybindHandler)
-	local keybindInstance = originalElements.Keybind:Clone()
-	local sideClosedTextPaddingPixels = 1
-	local keybindTextPadding = 4
-	local isListening = false   -- true while waiting for key press
-	local currentKeyCode = nil  -- the active KeyCode enum item
-	local listenConnection = nil
-	local originialOffsetSize
-	local textAnimationSpeed = .025
-	local textAnimation
-	
-	local pressKeyMsg = "Press a key..."
-	local textParams = Instance.new("GetTextBoundsParams")
-	textParams.Text = pressKeyMsg
-	textParams.Width = 10000
-	textParams.Font = keybindInstance.BoxBackground.InnerBox.KeyText.FontFace
-	textParams.Size = M.TextSize
-	
-	local requiredInputKeyTextSize = TextService:GetTextBoundsAsync(textParams)
-	local requiredInputKeyTextTween = TweenService:Create(keybindInstance.BoxBackground, TweenInfo.new(.25, Enum.EasingStyle.Linear), {Size = UDim2.new(0, requiredInputKeyTextSize.X + keybindInstance.BoxBackground.BoxPadding.PaddingLeft.Offset + keybindInstance.BoxBackground.BoxPadding.PaddingRight.Offset + keybindInstance.BoxBackground.InnerBox.BoxPadding.PaddingLeft.Offset + keybindInstance.BoxBackground.InnerBox.BoxPadding.PaddingRight.Offset, 1, 0)})
-	
-	callback = callback or function() end
+	local keybind         = setmetatable({}, keybindHandler)
+	local inst            = originalElements.Keybind:Clone()
+	local tag             = inst.BoxBackground          -- the right-side key tag
+	local keyLabel        = tag.KeyText                 -- direct child now
+	local nameLabel       = inst.KeybindText
+	local isListening     = false
+	local currentKeyCode  = nil
+
+	callback   = callback   or function() end
 	keybindName = keybindName or "N/A"
-	defaultKey = defaultKey or "F"
-	
-	local function getMatchingKeyCodeFromName(name: string)
-		if not name then return end
-		for _, keycode in pairs(Enum.KeyCode:GetEnumItems()) do
-			if keycode.Name:lower() == name:lower() then
-				return keycode
-			end
+	defaultKey  = defaultKey  or "—"
+
+	local function getKeyCode(name)
+		if not name then return nil end
+		for _, kc in pairs(Enum.KeyCode:GetEnumItems()) do
+			if kc.Name:lower() == name:lower() then return kc end
 		end
 	end
-	
-	local function setKeyDisplay(keyName)
-		-- Just update the text; the pill is fixed-width
-		keybindInstance.BoxBackground.InnerBox.KeyText.Text = keyName
+
+	local function setKey(name)
+		keyLabel.Text       = name or "—"
+		keyLabel.TextColor3 = Color3.fromRGB(163, 33, 38)
+		tag.BackgroundColor3 = Color3.fromRGB(22, 23, 32)
+		if tag:FindFirstChild("TagBorder") then
+			tag.TagBorder.Color = Color3.fromRGB(163, 33, 38)
+		end
 	end
-	
-	local function onKeybindClick()
-		if isListening then return end  -- already waiting
+
+	local function setListening()
+		keyLabel.Text       = "..."
+		keyLabel.TextColor3 = Color3.fromRGB(255, 180, 50)
+		tag.BackgroundColor3 = Color3.fromRGB(30, 25, 15)
+		if tag:FindFirstChild("TagBorder") then
+			tag.TagBorder.Color = Color3.fromRGB(255, 180, 50)
+		end
+	end
+
+	local listenConn
+
+	local function onClick()
+		if isListening then return end
 		isListening = true
-		
-		keybindInstance.BoxBackground.InnerBox.KeyText.Text = pressKeyMsg
-		
-		-- Single connection, disconnects itself after one valid key
-		if listenConnection then listenConnection:Disconnect() end
-		listenConnection = UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+		setListening()
+
+		if listenConn then listenConn:Disconnect() end
+		listenConn = UserInputService.InputBegan:Connect(function(input, _gp)
 			if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 			if input.KeyCode.Name == "Unknown" then return end
-			
 			isListening = false
-			listenConnection:Disconnect()
-			listenConnection = nil
-			
+			listenConn:Disconnect()
+			listenConn = nil
 			currentKeyCode = input.KeyCode
-			setKeyDisplay(input.KeyCode.Name)
+			setKey(input.KeyCode.Name)
 		end)
 	end
-	
-	local function onInputBegan(input, gameProcessedEvent)
-		if gameProcessedEvent then return end
-		if isListening then return end  -- don't fire callback while picking a key
+
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if isListening then return end
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			if currentKeyCode and input.KeyCode == currentKeyCode then
 				callback()
 			end
 		end
-	end
-	
-	keybind.Type = "Keybind"
+	end)
+
+	inst.MouseButton1Click:Connect(onClick)
+
+	-- Init
+	nameLabel.Text = keybindName
+	setKey(defaultKey ~= "—" and defaultKey or nil)
+	currentKeyCode = getKeyCode(defaultKey)
+
+	inst.Parent = self.ElementToParentChildren
+	-- Destroy the aspect constraint stub now that we're live
+	if tag:FindFirstChild("BoxAspect") then tag.BoxAspect:Destroy() end
+	nameLabel.Size = UDim2.new(1, -(tag.AbsoluteSize.X + 6), 1, 0)
+
+	keybind.Type          = "Keybind"
 	keybind.IdentifierText = keybindName
-	keybind.Instance = keybindInstance
-	keybind.GuiToRemove = keybindInstance
-	
-	UserInputService.InputBegan:Connect(onInputBegan)
-	keybindInstance.MouseButton1Click:Connect(onKeybindClick)
-	
-	keybindInstance.KeybindText.Text = keybindName
-	keybindInstance.BoxBackground.InnerBox.KeyText.Text = defaultKey
-	
-	currentKeyCode = getMatchingKeyCodeFromName(defaultKey)
-	
-	keybindInstance.Parent = self.ElementToParentChildren
-	originialOffsetSize = keybindInstance.BoxBackground.AbsoluteSize
-	keybindInstance.BoxBackground.Size = UDim2.fromOffset(originialOffsetSize.X, originialOffsetSize.Y)
-	keybindInstance.BoxBackground.BoxAspect:Destroy()
-	keybindInstance.KeybindText.Size = UDim2.new(1, -(originialOffsetSize.X + keybindTextPadding), 1, 0)
-	
+	keybind.Instance      = inst
+	keybind.GuiToRemove   = inst
 	return keybind
 end
 
@@ -3935,7 +3934,7 @@ function toggleHandler:BindKey(arg, defaultKeyName)
 
     -- Build the UI row (same template as the standalone Keybind element)
     local keybindRow     = originalElements.Keybind:Clone()
-    local keyText        = keybindRow.BoxBackground.InnerBox.KeyText
+    local keyText        = keybindRow.BoxBackground.KeyText
     local boxBackground  = keybindRow.BoxBackground
     local keybindTextLbl = keybindRow.KeybindText
 
@@ -4187,7 +4186,7 @@ function windowHandler:ConfigTab()
     -- Build a proper keybind row that updates window.CurrentKeybind when pressed
     do
         local keybindRow     = originalElements.Keybind:Clone()
-        local keyText        = keybindRow.BoxBackground.InnerBox.KeyText
+        local keyText        = keybindRow.BoxBackground.KeyText
         local boxBackground  = keybindRow.BoxBackground
         local keybindTextLbl = keybindRow.KeybindText
 
@@ -4446,82 +4445,157 @@ _G.BSMTSettings = Library.Settings
 -- ║  Toggled via ConfigTab or Library.Watermark  ║
 -- ╚══════════════════════════════════════════════╝
 do
-    local RunService   = game:GetService("RunService")
-    local Stats        = game:GetService("Stats")
-    local screenGui    = Instance.new("ScreenGui")
-    local container    = Instance.new("Frame")
-    local corner       = Instance.new("UICorner")
-    local padding      = Instance.new("UIPadding")
-    local label        = Instance.new("TextLabel")
+    local RunService = game:GetService("RunService")
+    local Stats      = game:GetService("Stats")
 
-    screenGui.Name              = "BSMTWatermark"
-    screenGui.ResetOnSpawn      = false
-    screenGui.ZIndexBehavior    = Enum.ZIndexBehavior.Sibling
-    screenGui.DisplayOrder      = 999
+    -- ── ScreenGui ──────────────────────────────────────────────────────────
+    local screenGui         = Instance.new("ScreenGui")
+    screenGui.Name          = "BSMTWatermark"
+    screenGui.ResetOnSpawn  = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.DisplayOrder  = 999
+    screenGui.IgnoreGuiInset = true
 
-    container.Name              = "Container"
-    container.Parent            = screenGui
-    container.AnchorPoint       = Vector2.new(0, 0)
-    container.Position          = UDim2.new(0, 8, 0, 8)
-    container.Size              = UDim2.new(0, 220, 0, 22)
-    container.BackgroundColor3  = Color3.fromRGB(18, 19, 26)
-    container.BackgroundTransparency = 0.25
-    container.BorderSizePixel   = 0
+    -- ── Outer shell: dark pill with slight transparency ────────────────────
+    local shell             = Instance.new("Frame")
+    shell.Name              = "Shell"
+    shell.Parent            = screenGui
+    shell.AnchorPoint       = Vector2.new(0, 0)
+    shell.Position          = UDim2.new(0, 10, 0, 10)
+    shell.Size              = UDim2.new(0, 10, 0, 26)   -- width auto-expands via UIListLayout
+    shell.AutomaticSize     = Enum.AutomaticSize.X
+    shell.BackgroundColor3  = Color3.fromRGB(14, 14, 20)
+    shell.BackgroundTransparency = 0.15
+    shell.BorderSizePixel   = 0
+    shell.ClipsDescendants  = false
 
-    corner.CornerRadius         = UDim.new(0, 4)
-    corner.Parent               = container
+    local shellCorner       = Instance.new("UICorner")
+    shellCorner.CornerRadius = UDim.new(0, 6)
+    shellCorner.Parent      = shell
 
-    padding.PaddingLeft         = UDim.new(0, 8)
-    padding.PaddingRight        = UDim.new(0, 8)
-    padding.Parent              = container
+    local shellStroke       = Instance.new("UIStroke")
+    shellStroke.Color       = Color3.fromRGB(163, 33, 38)
+    shellStroke.Thickness   = 1
+    shellStroke.Transparency = 0.5
+    shellStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    shellStroke.Parent      = shell
 
-    label.Name                  = "WatermarkText"
-    label.Parent                = container
-    label.BackgroundTransparency = 1
-    label.Size                  = UDim2.new(1, 0, 1, 0)
-    label.Font                  = Enum.Font.GothamBold
-    label.TextSize              = 13
-    label.TextColor3            = Color3.fromRGB(255, 255, 255)
-    label.TextXAlignment        = Enum.TextXAlignment.Left
-    label.RichText              = true
+    -- ── Red left accent bar (sits OUTSIDE padding so it touches the edge) ──
+    local accentBar         = Instance.new("Frame")
+    accentBar.Name          = "AccentBar"
+    accentBar.Parent        = shell
+    accentBar.AnchorPoint   = Vector2.new(0, 0.5)
+    accentBar.Position      = UDim2.new(0, 0, 0.5, 0)
+    accentBar.Size          = UDim2.new(0, 3, 1, -2)
+    accentBar.BackgroundColor3 = Color3.fromRGB(163, 33, 38)
+    accentBar.BorderSizePixel  = 0
+    accentBar.ZIndex        = 2
 
-    -- Left red accent bar
-    local accent                = Instance.new("Frame")
-    accent.Name                 = "Accent"
-    accent.Parent               = container
-    accent.AnchorPoint          = Vector2.new(0, 0.5)
-    accent.Position             = UDim2.new(0, 0, 0.5, 0)
-    accent.Size                 = UDim2.new(0, 3, 1, 0)
-    accent.BackgroundColor3     = Color3.fromRGB(163, 33, 38)
-    accent.BorderSizePixel      = 0
-    local accentCorner          = Instance.new("UICorner")
-    accentCorner.CornerRadius   = UDim.new(0, 4)
-    accentCorner.Parent         = accent
+    local accentCorner      = Instance.new("UICorner")
+    accentCorner.CornerRadius = UDim.new(0, 6)
+    accentCorner.Parent     = accentBar
 
-    -- Default: visible
-    local wmVisible = true
+    -- ── Horizontal layout for segments ────────────────────────────────────
+    local layout            = Instance.new("UIListLayout")
+    layout.Parent           = shell
+    layout.FillDirection    = Enum.FillDirection.Horizontal
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    layout.Padding          = UDim.new(0, 0)
+    layout.SortOrder        = Enum.SortOrder.LayoutOrder
+
+    local shellPadding      = Instance.new("UIPadding")
+    shellPadding.PaddingLeft  = UDim.new(0, 10)
+    shellPadding.PaddingRight = UDim.new(0, 10)
+    shellPadding.Parent     = shell
+
+    -- Helper: create a text segment
+    local function makeSegment(text, color, order, bold)
+        local lbl           = Instance.new("TextLabel")
+        lbl.Name            = "Seg" .. order
+        lbl.Parent          = shell
+        lbl.BackgroundTransparency = 1
+        lbl.AutomaticSize   = Enum.AutomaticSize.X
+        lbl.Size            = UDim2.new(0, 0, 1, 0)
+        lbl.Font            = bold and Enum.Font.GothamBold or Enum.Font.Gotham
+        lbl.Text            = text
+        lbl.TextColor3      = color
+        lbl.TextSize        = 13
+        lbl.RichText        = false
+        lbl.LayoutOrder     = order
+        return lbl
+    end
+
+    -- Divider helper
+    local function makeDivider(order)
+        local div           = Instance.new("TextLabel")
+        div.Name            = "Div" .. order
+        div.Parent          = shell
+        div.BackgroundTransparency = 1
+        div.Size            = UDim2.new(0, 18, 1, 0)
+        div.AutomaticSize   = Enum.AutomaticSize.None
+        div.Font            = Enum.Font.Gotham
+        div.Text            = "|"
+        div.TextColor3      = Color3.fromRGB(60, 62, 75)
+        div.TextSize        = 13
+        div.TextXAlignment  = Enum.TextXAlignment.Center
+        div.LayoutOrder     = order
+        return div
+    end
+
+    -- ── Segments ───────────────────────────────────────────────────────────
+    local lblTitle  = makeSegment("BSMT",  Color3.fromRGB(255, 255, 255), 1,  true)
+    local _div1     = makeDivider(2)
+    local lblFps    = makeSegment("--",    Color3.fromRGB(255, 255, 255), 3,  true)
+    local lblFpsTxt = makeSegment(" fps",  Color3.fromRGB(100, 102, 115), 4,  false)
+    local _div2     = makeDivider(5)
+    local lblPing   = makeSegment("--",    Color3.fromRGB(255, 255, 255), 6,  true)
+    local lblPingTxt= makeSegment(" ms",   Color3.fromRGB(100, 102, 115), 7,  false)
+
+    -- ── FPS colour helper ──────────────────────────────────────────────────
+    local function fpsColor(fps)
+        if fps >= 55 then return Color3.fromRGB(80, 210, 120)   -- green
+        elseif fps >= 30 then return Color3.fromRGB(230, 190, 60) -- yellow
+        else return Color3.fromRGB(220, 60, 60) end              -- red
+    end
+
+    local function pingColor(ping)
+        if ping <= 80  then return Color3.fromRGB(80, 210, 120)
+        elseif ping <= 150 then return Color3.fromRGB(230, 190, 60)
+        else return Color3.fromRGB(220, 60, 60) end
+    end
+
+    -- ── Update loop ────────────────────────────────────────────────────────
     local wmConn
+    local wmVisible = true
+    local frameCount = 0
+    local lastTime   = tick()
 
-    local function updateLabel()
-        local ok, fps  = pcall(function() return math.round(1 / RunService.Heartbeat:Wait()) end)
-        local ok2, ping = pcall(function() return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-        local fpsStr  = ok  and tostring(fps)  or "--"
-        local pingStr = ok2 and tostring(ping) or "--"
-        label.Text = '<font color="#FFFFFF">BSMT</font>'
-            .. '  <font color="#666677">|</font>  '
-            .. '<font color="#A32126">' .. fpsStr .. '</font>'
-            .. ' <font color="#888899">fps</font>'
-            .. '  <font color="#666677">|</font>  '
-            .. '<font color="#A32126">' .. pingStr .. '</font>'
-            .. ' <font color="#888899">ms</font>'
+    local function updateWatermark(dt)
+        -- FPS: count frames over 0.5s window
+        frameCount += 1
+        local now = tick()
+        if now - lastTime >= 0.5 then
+            local fps = math.round(frameCount / (now - lastTime))
+            frameCount = 0
+            lastTime   = now
+            lblFps.Text       = tostring(fps)
+            lblFps.TextColor3 = fpsColor(fps)
+        end
+
+        -- Ping: read every frame (cheap)
+        local ok, ping = pcall(function()
+            return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
+        if ok then
+            lblPing.Text       = tostring(ping)
+            lblPing.TextColor3 = pingColor(ping)
+        end
     end
 
     local function startWatermark()
         if wmConn then return end
-        updateLabel()
-        wmConn = RunService.Heartbeat:Connect(function()
-            updateLabel()
-        end)
+        wmConn = RunService.Heartbeat:Connect(updateWatermark)
     end
 
     local function stopWatermark()
@@ -4530,34 +4604,31 @@ do
 
     local function setWatermarkVisible(v)
         wmVisible = v
-        container.Visible = v
+        shell.Visible = v
         _G.BSMTConfigData["watermark_enabled"] = v
         if v then startWatermark() else stopWatermark() end
     end
 
-    -- Parent after everything is configured
-    pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
-    if not screenGui.Parent then
+    -- Parent
+    local ok = pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
+    if not ok or not screenGui.Parent then
         screenGui.Parent = player.PlayerGui
     end
 
-    -- Start by default
     setWatermarkVisible(true)
 
-    -- Expose on Library
     Library.Watermark = {
         SetVisible = setWatermarkVisible,
         IsVisible  = function() return wmVisible end,
     }
 
-    -- Register in config so SaveConfig/LoadConfig can toggle it
     _G.BSMTConfigElements["watermark_enabled"] = {
         Type  = "WatermarkToggle",
         Apply = function(_, value)
             setWatermarkVisible(value == true or value == nil)
         end,
     }
-    -- Restore from saved config if present
+
     if _G.BSMTConfigData["watermark_enabled"] ~= nil then
         setWatermarkVisible(_G.BSMTConfigData["watermark_enabled"])
     end
