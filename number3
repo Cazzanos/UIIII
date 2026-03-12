@@ -142,12 +142,11 @@ local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEna
 -- ║  BSMT – Universal Input Binding Helpers      ║
 -- ║  Supports: keyboard, mouse 1-5, scroll wheel ║
 -- ╚══════════════════════════════════════════════╝
+-- Roblox only exposes MB1/2/3 in Enum.UserInputType; MB4/MB5 are not supported.
 local BINDABLE_MOUSE_TYPES = {
     [Enum.UserInputType.MouseButton1] = "MB1",
     [Enum.UserInputType.MouseButton2] = "MB2",
     [Enum.UserInputType.MouseButton3] = "MB3",
-    [Enum.UserInputType.MouseButton4] = "MB4",
-    [Enum.UserInputType.MouseButton5] = "MB5",
 }
 local MOUSE_TYPE_FROM_NAME = {}
 for ut, name in pairs(BINDABLE_MOUSE_TYPES) do
@@ -157,7 +156,6 @@ end
 -- Readable short names for display in the tag
 local MOUSE_DISPLAY = {
     MB1 = "LClick", MB2 = "RClick", MB3 = "M3",
-    MB4 = "MB4",    MB5 = "MB5",
 }
 
 -- A binding is a plain table:
