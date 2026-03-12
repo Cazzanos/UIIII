@@ -137,6 +137,102 @@ local viewPortSize = workspace.CurrentCamera.ViewportSize
 -- ╚══════════════════════════════════════════════╝
 
 local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+
+-- ╔══════════════════════════════════════════════╗
+-- ║  BSMT – Universal Input Binding Helpers      ║
+-- ║  Supports: keyboard, mouse 1-5, scroll wheel ║
+-- ╚══════════════════════════════════════════════╝
+local BINDABLE_MOUSE_TYPES = {
+    [Enum.UserInputType.MouseButton1] = "MB1",
+    [Enum.UserInputType.MouseButton2] = "MB2",
+    [Enum.UserInputType.MouseButton3] = "MB3",
+    [Enum.UserInputType.MouseButton4] = "MB4",
+    [Enum.UserInputType.MouseButton5] = "MB5",
+}
+local MOUSE_TYPE_FROM_NAME = {}
+for ut, name in pairs(BINDABLE_MOUSE_TYPES) do
+    MOUSE_TYPE_FROM_NAME[name] = ut
+end
+
+-- Readable short names for display in the tag
+local MOUSE_DISPLAY = {
+    MB1 = "LClick", MB2 = "RClick", MB3 = "M3",
+    MB4 = "MB4",    MB5 = "MB5",
+}
+
+-- A binding is a plain table:
+--   Keyboard  → { kind="Key",    keyCode=Enum.KeyCode.X }
+--   Mouse btn → { kind="Mouse",  inputType=Enum.UserInputType.MouseButton1 }
+--   Scroll    → { kind="Scroll", direction=1 (up) or -1 (down) }
+
+local function resolveBinding(input)
+    -- Keyboard
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == Enum.KeyCode.Unknown then return nil, nil end
+        return input.KeyCode.Name, { kind="Key", keyCode=input.KeyCode }
+    end
+    -- Mouse buttons
+    local mbName = BINDABLE_MOUSE_TYPES[input.UserInputType]
+    if mbName then
+        return MOUSE_DISPLAY[mbName] or mbName,
+               { kind="Mouse", inputType=input.UserInputType }
+    end
+    -- Scroll
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local dir = input.Position.Z > 0 and 1 or -1
+        local dispName = dir > 0 and "ScrlUp" or "ScrlDn"
+        return dispName, { kind="Scroll", direction=dir }
+    end
+    return nil, nil
+end
+
+local function bindingMatches(input, binding)
+    if not binding then return false end
+    if binding.kind == "Key" then
+        return input.UserInputType == Enum.UserInputType.Keyboard
+               and input.KeyCode == binding.keyCode
+    elseif binding.kind == "Mouse" then
+        return input.UserInputType == binding.inputType
+    elseif binding.kind == "Scroll" then
+        return input.UserInputType == Enum.UserInputType.MouseWheel
+               and ((input.Position.Z > 0) == (binding.direction > 0))
+    end
+    return false
+end
+
+-- Encode/decode for config saving
+local function encodeBinding(binding)
+    if not binding then return "" end
+    if binding.kind == "Key"    then return "Key:"    .. binding.keyCode.Name end
+    if binding.kind == "Mouse"  then return "Mouse:"  .. binding.inputType.Name end
+    if binding.kind == "Scroll" then return "Scroll:" .. tostring(binding.direction) end
+    return ""
+end
+
+local function decodeBinding(str)
+    if not str or str == "" then return nil, nil end
+    local kind, val = str:match("^(%a+):(.+)$")
+    if kind == "Key" then
+        for _, kc in pairs(Enum.KeyCode:GetEnumItems()) do
+            if kc.Name == val then
+                return kc.Name, { kind="Key", keyCode=kc }
+            end
+        end
+    elseif kind == "Mouse" then
+        for ut, name in pairs(BINDABLE_MOUSE_TYPES) do
+            if ut.Name == val then
+                return MOUSE_DISPLAY[name] or name, { kind="Mouse", inputType=ut }
+            end
+        end
+    elseif kind == "Scroll" then
+        local d = tonumber(val)
+        if d then
+            return (d > 0 and "ScrlUp" or "ScrlDn"), { kind="Scroll", direction=d }
+        end
+    end
+    return nil, nil
+end
+-- ──────────────────────────────────────────────────────────────────────────────
 local scaleFactor = math.clamp(viewPortSize.Y / 1080, 0.6, 1.4)
 
 -- Theme: single source of truth for all colours
@@ -2077,25 +2173,37 @@ function Library.new(windowName: string, constrainToScreen: boolean?, width: num
 		end)
 	end
 
-	-- Mobile drag: track a single touch on the heading bar
+	-- Mobile drag via UserInputService (heading.TouchStarted is unreliable on TextButton)
 	if isMobile then
-		local touchId = nil
-		heading.TouchStarted:Connect(function(touch, _gp)
-			if touchId then return end  -- only track first finger
-			touchId = touch.TouchId
-			startDragMousePos = Vector2.new(touch.Position.X, touch.Position.Y)
-			startDragWindowPos = Vector2.new(background.Position.X.Offset, background.Position.Y.Offset)
+		local dragging    = false
+		local dragTouchId = nil
+		UserInputService.TouchStarted:Connect(function(touch, _gp)
+			if dragging then return end
+			-- Only start drag if touch began inside the heading
+			local headingPos  = heading.AbsolutePosition
+			local headingSize = heading.AbsoluteSize
+			local tx, ty = touch.Position.X, touch.Position.Y
+			if tx >= headingPos.X and tx <= headingPos.X + headingSize.X
+				and ty >= headingPos.Y and ty <= headingPos.Y + headingSize.Y then
+				dragging = true
+				dragTouchId = touch.TouchId
+				startDragMousePos  = Vector2.new(tx, ty)
+				startDragWindowPos = Vector2.new(background.Position.X.Offset, background.Position.Y.Offset)
+			end
 		end)
-		heading.TouchMoved:Connect(function(touch, _gp)
-			if touch.TouchId ~= touchId then return end
-			local delta = Vector2.new(touch.Position.X, touch.Position.Y) - startDragMousePos
+		UserInputService.TouchMoved:Connect(function(touch, _gp)
+			if not dragging or touch.TouchId ~= dragTouchId then return end
+			local delta  = Vector2.new(touch.Position.X, touch.Position.Y) - startDragMousePos
 			local bgSize = background.AbsoluteSize
-			local newX = math.clamp(startDragWindowPos.X + delta.X, bgSize.X / 2, viewPortSize.X - bgSize.X / 2)
-			local newY = math.clamp(startDragWindowPos.Y + delta.Y, bgSize.Y / 2, viewPortSize.Y - bgSize.Y / 2)
+			local newX   = math.clamp(startDragWindowPos.X + delta.X, bgSize.X / 2, viewPortSize.X - bgSize.X / 2)
+			local newY   = math.clamp(startDragWindowPos.Y + delta.Y, bgSize.Y / 2, viewPortSize.Y - bgSize.Y / 2)
 			background.Position = UDim2.new(0, newX, 0, newY)
 		end)
-		heading.TouchEnded:Connect(function(touch, _gp)
-			if touch.TouchId == touchId then touchId = nil end
+		UserInputService.TouchEnded:Connect(function(touch, _gp)
+			if touch.TouchId == dragTouchId then
+				dragging    = false
+				dragTouchId = nil
+			end
 		end)
 	end
 
@@ -3000,88 +3108,85 @@ end
 
 -- Keybind element
 function elementHandler:Keybind(keybindName: string, callback, defaultKey: string): table
-	local keybind         = setmetatable({}, keybindHandler)
-	local inst            = originalElements.Keybind:Clone()
-	local tag             = inst.BoxBackground          -- the right-side key tag
-	local keyLabel        = tag.KeyText                 -- direct child now
-	local nameLabel       = inst.KeybindText
-	local isListening     = false
-	local currentKeyCode  = nil
+	local keybind        = setmetatable({}, keybindHandler)
+	local inst           = originalElements.Keybind:Clone()
+	local tag            = inst.BoxBackground
+	local keyLabel       = tag.KeyText
+	local nameLabel      = inst.KeybindText
+	local isListening    = false
+	local currentBinding = nil   -- binding table { kind, ... }
 
-	callback   = callback   or function() end
+	callback    = callback    or function() end
 	keybindName = keybindName or "N/A"
-	defaultKey  = defaultKey  or "—"
+	defaultKey  = defaultKey  or ""
 
-	local function getKeyCode(name)
-		if not name then return nil end
-		for _, kc in pairs(Enum.KeyCode:GetEnumItems()) do
-			if kc.Name:lower() == name:lower() then return kc end
+	local function applyTagStyle(listening)
+		if listening then
+			keyLabel.Text        = "..."
+			keyLabel.TextColor3  = Color3.fromRGB(255, 180, 50)
+			tag.BackgroundColor3 = Color3.fromRGB(30, 25, 15)
+			if tag:FindFirstChild("TagBorder") then tag.TagBorder.Color = Color3.fromRGB(255,180,50) end
+		else
+			keyLabel.TextColor3  = Color3.fromRGB(163, 33, 38)
+			tag.BackgroundColor3 = Color3.fromRGB(22, 23, 32)
+			if tag:FindFirstChild("TagBorder") then tag.TagBorder.Color = Color3.fromRGB(163,33,38) end
 		end
 	end
 
-	local function setKey(name)
-		keyLabel.Text       = name or "—"
-		keyLabel.TextColor3 = Color3.fromRGB(163, 33, 38)
-		tag.BackgroundColor3 = Color3.fromRGB(22, 23, 32)
-		if tag:FindFirstChild("TagBorder") then
-			tag.TagBorder.Color = Color3.fromRGB(163, 33, 38)
-		end
-	end
-
-	local function setListening()
-		keyLabel.Text       = "..."
-		keyLabel.TextColor3 = Color3.fromRGB(255, 180, 50)
-		tag.BackgroundColor3 = Color3.fromRGB(30, 25, 15)
-		if tag:FindFirstChild("TagBorder") then
-			tag.TagBorder.Color = Color3.fromRGB(255, 180, 50)
-		end
+	local function setDisplay(dispName)
+		keyLabel.Text = dispName or "—"
+		applyTagStyle(false)
 	end
 
 	local listenConn
-
-	local function onClick()
+	local function beginListening()
 		if isListening then return end
 		isListening = true
-		setListening()
-
+		applyTagStyle(true)
 		if listenConn then listenConn:Disconnect() end
+		-- Listen on InputBegan for keyboard/mouse, and Changed for scroll
 		listenConn = UserInputService.InputBegan:Connect(function(input, _gp)
-			if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-			if input.KeyCode.Name == "Unknown" then return end
-			isListening = false
+			local dispName, binding = resolveBinding(input)
+			if not binding then return end
+			isListening    = false
 			listenConn:Disconnect()
-			listenConn = nil
-			currentKeyCode = input.KeyCode
-			setKey(input.KeyCode.Name)
+			listenConn     = nil
+			currentBinding = binding
+			setDisplay(dispName)
 		end)
 	end
 
+	-- Fire callback when the bound input is detected
 	UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
 		if isListening then return end
-		if input.UserInputType == Enum.UserInputType.Keyboard then
-			if currentKeyCode and input.KeyCode == currentKeyCode then
-				callback()
-			end
-		end
+		if bindingMatches(input, currentBinding) then callback() end
 	end)
 
-	inst.MouseButton1Click:Connect(onClick)
+	inst.MouseButton1Click:Connect(beginListening)
 
-	-- Init
+	-- Set default key from name string (keyboard only for defaults)
+	if defaultKey ~= "" then
+		for _, kc in pairs(Enum.KeyCode:GetEnumItems()) do
+			if kc.Name:lower() == defaultKey:lower() then
+				currentBinding = { kind="Key", keyCode=kc }
+				setDisplay(kc.Name)
+				break
+			end
+		end
+	end
+
 	nameLabel.Text = keybindName
-	setKey(defaultKey ~= "—" and defaultKey or nil)
-	currentKeyCode = getKeyCode(defaultKey)
+	if not currentBinding then setDisplay(nil) end
 
 	inst.Parent = self.ElementToParentChildren
-	-- Destroy the aspect constraint stub now that we're live
 	if tag:FindFirstChild("BoxAspect") then tag.BoxAspect:Destroy() end
 	nameLabel.Size = UDim2.new(1, -(tag.AbsoluteSize.X + 6), 1, 0)
 
-	keybind.Type          = "Keybind"
+	keybind.Type           = "Keybind"
 	keybind.IdentifierText = keybindName
-	keybind.Instance      = inst
-	keybind.GuiToRemove   = inst
+	keybind.Instance       = inst
+	keybind.GuiToRemove    = inst
 	return keybind
 end
 
@@ -3658,10 +3763,25 @@ function Library.LoadConfig(configName)
                 elseif element.Type == "Slider" then
                     element:SetValue(result[identifier])
                 elseif element.Type == "ToggleKeybind" then
-                    -- Re-bind from saved key name
-                    element.toggle:BindKeyCode(result[identifier])
-                    if element.instance then
-                        element.instance.Text = result[identifier]
+                    -- Re-bind from saved encoded binding string
+                    local saved = result[identifier]
+                    if saved and saved ~= "" then
+                        local dispName, binding = decodeBinding(saved)
+                        if binding then
+                            element.toggle:BindKeyCode(binding)
+                            if element.instance and dispName then
+                                element.instance.Text = dispName
+                            end
+                        else
+                            -- Legacy: plain key name (e.g. "RightShift")
+                            for _, kc in pairs(Enum.KeyCode:GetEnumItems()) do
+                                if kc.Name == saved then
+                                    element.toggle:BindKeyCode({ kind="Key", keyCode=kc })
+                                    if element.instance then element.instance.Text = kc.Name end
+                                    break
+                                end
+                            end
+                        end
                     end
                 elseif element.Type == "WatermarkToggle" then
                     element:Apply(nil, result[identifier])
@@ -3839,23 +3959,31 @@ end
 --   Attaches a low-level UIS listener. When the key is pressed it calls
 --   self:Apply(not self.Enabled, true) which updates visuals AND fires Callback.
 -- ─────────────────────────────────────────────────────────────────────────────
-function toggleHandler:BindKeyCode(keyCode)
-    -- Disconnect any existing listener first
+function toggleHandler:BindKeyCode(bindingOrKeyCode)
+    -- Disconnect any previous listener
     if self._keyConnection then
         self._keyConnection:Disconnect()
         self._keyConnection = nil
     end
-    self._boundKeyCode = keyCode or nil
-    if not keyCode then return end
+    if not bindingOrKeyCode then
+        self._boundBinding = nil
+        return
+    end
 
-    -- Capture self.Callback at bind time so it can never be nil inside the closure
+    -- Accept either a binding table {kind,…} or a raw Enum.KeyCode (backwards compat)
+    local binding
+    if typeof(bindingOrKeyCode) == "EnumItem" then
+        binding = { kind="Key", keyCode=bindingOrKeyCode }
+    else
+        binding = bindingOrKeyCode
+    end
+    self._boundBinding = binding
+
     local cb = self.Callback
-
     self._keyConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-        if input.KeyCode ~= self._boundKeyCode then return end
-        -- Flip state: updates visuals + fires the user callback
+        if not bindingMatches(input, self._boundBinding) then return end
+
         self.Enabled = not self.Enabled
 
         local tweenTime = .275
@@ -3871,12 +3999,9 @@ function toggleHandler:BindKeyCode(keyCode)
             TweenService:Create(toggleImage,       TweenInfo.new(tweenTime, Enum.EasingStyle.Linear),                                {Size = UDim2.fromScale(0,0)}):Play()
         end
 
-        -- Save to config
         if self.ConfigIdentifier then
             _G.BSMTConfigData[self.ConfigIdentifier] = self.Enabled
         end
-
-        -- Fire the user's callback with the new state
         if cb then cb(self.Enabled) end
     end)
 end
@@ -3917,7 +4042,7 @@ function toggleHandler:BindKey(arg, defaultKeyName)
     if arg ~= nil then
         local directCode = getKeyCode(arg)
         if directCode then
-            self:BindKeyCode(directCode)
+            self:BindKeyCode({ kind="Key", keyCode=directCode })
             return
         end
     end
@@ -3956,7 +4081,7 @@ function toggleHandler:BindKey(arg, defaultKeyName)
         local startCode = getKeyCode(startKey)
         if startCode then
             keyText.Text = startKey
-            self:BindKeyCode(startCode)
+            self:BindKeyCode({ kind="Key", keyCode=startCode })
         end
     end
 
@@ -3967,39 +4092,34 @@ function toggleHandler:BindKey(arg, defaultKeyName)
         instance = keyText,
     }
 
-    -- Click → listen for next key press
+    -- Click → listen for next keyboard / mouse / scroll input
     local isListening = false
     local listenConn  = nil
 
-    keybindRow.MouseButton1Click:Connect(function()
+    local function startListening()
         if isListening then return end
         isListening  = true
-        keyText.Text = "Press key..."
-
+        keyText.Text = "..."
         if listenConn then listenConn:Disconnect() end
         listenConn = UserInputService.InputBegan:Connect(function(input, _gpe)
-            if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-            if input.KeyCode.Name == "Unknown" then return end
-
+            local dispName, binding = resolveBinding(input)
+            if not binding then return end
             isListening = false
             listenConn:Disconnect()
-            listenConn = nil
-
-            local keyName = input.KeyCode.Name
-            keyText.Text  = keyName
-            self:BindKeyCode(input.KeyCode)
-
-            -- Store in config data (persisted when user clicks Save Config)
-            _G.BSMTConfigData[configKey] = keyName
-
-            Library.Notification(label .. " → " .. keyName, "success", 2)
+            listenConn  = nil
+            keyText.Text = dispName
+            self:BindKeyCode(binding)
+            _G.BSMTConfigData[configKey] = encodeBinding(binding)
+            Library.Notification(label .. " → " .. dispName, "success", 2)
         end)
-    end)
+    end
+
+    keybindRow.MouseButton1Click:Connect(startListening)
 
     -- Right-click → clear binding
     keybindRow.MouseButton2Click:Connect(function()
         if listenConn then listenConn:Disconnect() listenConn = nil end
-        isListening = false
+        isListening  = false
         keyText.Text = "None"
         self:BindKeyCode(nil)
         _G.BSMTConfigData[configKey] = ""
@@ -4203,26 +4323,26 @@ function windowHandler:ConfigTab()
         local isListening = false
         local listenConn  = nil
 
-        keybindRow.MouseButton1Click:Connect(function()
+        -- UI visibility key: keyboard only (intentional)
+        local function startUIKeybindListen()
             if isListening then return end
-            isListening      = true
-            keyText.Text     = "Press key..."
-
+            isListening  = true
+            keyText.Text = "..."
             if listenConn then listenConn:Disconnect() end
             listenConn = UserInputService.InputBegan:Connect(function(input, _gpe)
                 if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-                if input.KeyCode.Name == "Unknown" then return end
-
+                if input.KeyCode == Enum.KeyCode.Unknown then return end
                 isListening = false
                 listenConn:Disconnect()
                 listenConn = nil
-
                 local keyName = input.KeyCode.Name
                 self:SetKeybind(keyName)
                 keyText.Text = keyName
                 Library.Notification("UI keybind → " .. keyName, "success", 2)
             end)
-        end)
+        end
+
+        keybindRow.MouseButton1Click:Connect(startUIKeybindListen)
 
         -- Right-click resets to RightShift
         keybindRow.MouseButton2Click:Connect(function()
