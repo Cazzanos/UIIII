@@ -618,10 +618,10 @@ local function createOriginialElements()
 		tabImage.AnchorPoint = Vector2.new(0, 0.5)
 		tabImage.BackgroundTransparency = 1
 		tabImage.BorderSizePixel = 0
-		tabImage.Position = UDim2.new(0, 12, 0.5, 0)
-		tabImage.Size = UDim2.new(0, 15, 0, 15)
+		tabImage.Position = UDim2.new(0, 10, 0.5, 0)
+		tabImage.Size = UDim2.new(0, 16, 0, 16)
 		tabImage.Image = "rbxassetid://10746039695"
-		tabImage.ImageColor3 = Color3.fromRGB(110, 110, 125)
+		tabImage.ImageColor3 = Color3.fromRGB(140, 140, 158)
 
 		tabAspectRatioConstraint.Parent = tabImage
 
@@ -629,7 +629,7 @@ local function createOriginialElements()
 		tabText.Parent = tab
 		tabText.BackgroundTransparency = 1
 		tabText.Position = UDim2.new(0, 32, 0, 0)
-		tabText.Size = UDim2.new(1, -36, 1, 0)
+		tabText.Size = UDim2.new(1, -38, 1, 0)
 		tabText.Font = Enum.Font.Gotham
 		tabText.Text = "N/A"
 		tabText.TextColor3 = Color3.fromRGB(110, 110, 125)
@@ -2380,7 +2380,7 @@ function windowHandler:Tab(tabName: string, tabImage: string): table
 	local tabTextOpenTween = TweenService:Create(tabInstance.TabText, TweenInfo.new(.2, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(225, 225, 235)})
 	local tabTextCloseTween = TweenService:Create(tabInstance.TabText, TweenInfo.new(.2, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(110, 110, 125)})
 	local tabImageOpenTween = TweenService:Create(tabInstance.TabImage, TweenInfo.new(.2, Enum.EasingStyle.Quad), {ImageColor3 = Color3.fromRGB(163, 33, 38)})
-	local tabImageCloseTween = TweenService:Create(tabInstance.TabImage, TweenInfo.new(.2, Enum.EasingStyle.Quad), {ImageColor3 = Color3.fromRGB(110, 110, 125)})
+	local tabImageCloseTween = TweenService:Create(tabInstance.TabImage, TweenInfo.new(.2, Enum.EasingStyle.Quad), {ImageColor3 = Color3.fromRGB(140, 140, 158)})
 	local pageOpenTween = TweenService:Create(pageInstance, TweenInfo.new(.25, Enum.EasingStyle.Linear), {Size = UDim2.new(0.774999976, -25, 1, -15)})	
 	local pageCloseTween = TweenService:Create(pageInstance, TweenInfo.new(.25, Enum.EasingStyle.Linear), {Size = UDim2.new(0.775, -25, 0, 0)})
 	local logoShowTween = TweenService:Create(self.Instance.Background.Holder.PageLogo, TweenInfo.new(.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = .65})
@@ -3477,129 +3477,182 @@ notificationHandler.__index = notificationHandler
 
 local notificationContainer
 local activeNotifications = {}
-local notificationYOffset = 10
+local notificationContainer
+local activeNotifications = {}
 
 local function createNotificationContainer()
 	if notificationContainer then return notificationContainer end
-	
 	local container = Instance.new("ScreenGui")
 	container.Name = "BSMTNotifications"
 	container.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	container.IgnoreGuiInset = true
-	container.Parent = game:GetService("CoreGui")
-	
+	container.DisplayOrder = 998
+	pcall(function() container.Parent = game:GetService("CoreGui") end)
+	if not container.Parent then container.Parent = player.PlayerGui end
 	return container
 end
 
 local function createNotification()
-	local notification    = Instance.new("Frame")
-	local pill            = Instance.new("Frame")
-	local pillCorner      = Instance.new("UICorner")
-	local pillStroke      = Instance.new("UIStroke")
-	local accentBar       = Instance.new("Frame")
-	local accentBarCorner = Instance.new("UICorner")
-	local icon            = Instance.new("ImageLabel")
-	local textLabel       = Instance.new("TextLabel")
-	local textPadding     = Instance.new("UIPadding")
-	local progressBar     = Instance.new("Frame")
-	local progressBarInner = Instance.new("Frame")
-	local progressCorner  = Instance.new("UICorner")
+	-- Root: off-screen frame, auto-height
+	local root         = Instance.new("Frame")
+	local pill         = Instance.new("Frame")
+	local pillCorner   = Instance.new("UICorner")
+	local pillStroke   = Instance.new("UIStroke")
+	local accentBar    = Instance.new("Frame")
+	local accentCorner = Instance.new("UICorner")
+	local icon         = Instance.new("ImageLabel")
+	local closeBtn     = Instance.new("TextButton")
+	local titleLbl     = Instance.new("TextLabel")
+	local bodyLbl      = Instance.new("TextLabel")
+	local bodyPad      = Instance.new("UIPadding")
+	local progressBar  = Instance.new("Frame")
+	local progressFill = Instance.new("Frame")
+	local progressCorner = Instance.new("UICorner")
+	-- Layout inside pill
+	local pillList     = Instance.new("UIListLayout")
+	local topRow       = Instance.new("Frame")
 
-	notification.Name = "Notification"
-	notification.BackgroundTransparency = 1
-	notification.Size = UDim2.new(0, 280, 0, 48)
-	notification.Position = UDim2.new(1, 300, 0, 10)
+	-- Root wrapper (transparent, used for tweening position)
+	root.Name = "Notification"
+	root.BackgroundTransparency = 1
+	root.BorderSizePixel = 0
+	root.Size = UDim2.new(0, 300, 0, 68)
+	root.Position = UDim2.new(1, 320, 0, 10)
+	root.ClipsDescendants = false
 
+	-- Dark pill
 	pill.Name = "Background"
-	pill.Parent = notification
-	pill.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+	pill.Parent = root
+	pill.BackgroundColor3 = Color3.fromRGB(17, 17, 22)
 	pill.BorderSizePixel = 0
 	pill.Size = UDim2.new(1, 0, 1, 0)
+	pill.ClipsDescendants = false
 
-	pillCorner.CornerRadius = UDim.new(0, 6)
+	pillCorner.CornerRadius = UDim.new(0, 8)
 	pillCorner.Parent = pill
 
-	pillStroke.Color = Color3.fromRGB(40, 40, 52)
+	pillStroke.Color = Color3.fromRGB(45, 45, 60)
 	pillStroke.Thickness = 1
 	pillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	pillStroke.Parent = pill
 
-	-- Coloured left accent stripe
+	-- Left colour accent stripe
 	accentBar.Name = "AccentBar"
 	accentBar.Parent = pill
 	accentBar.AnchorPoint = Vector2.new(0, 0.5)
 	accentBar.Position = UDim2.new(0, 0, 0.5, 0)
-	accentBar.Size = UDim2.new(0, 3, 1, -2)
+	accentBar.Size = UDim2.new(0, 4, 0.72, 0)
 	accentBar.BackgroundColor3 = Color3.fromRGB(163, 33, 38)
 	accentBar.BorderSizePixel = 0
-	accentBarCorner.CornerRadius = UDim.new(0, 6)
-	accentBarCorner.Parent = accentBar
+	accentBar.ZIndex = 3
 
+	accentCorner.CornerRadius = UDim.new(0, 8)
+	accentCorner.Parent = accentBar
+
+	-- Icon
 	icon.Name = "Icon"
 	icon.Parent = pill
 	icon.AnchorPoint = Vector2.new(0, 0.5)
 	icon.BackgroundTransparency = 1
-	icon.Position = UDim2.new(0, 14, 0.5, 0)
-	icon.Size = UDim2.new(0, 18, 0, 18)
-	icon.Image = "rbxassetid://11454041890"
+	icon.Position = UDim2.new(0, 14, 0.38, 0)
+	icon.Size = UDim2.new(0, 16, 0, 16)
 	icon.ImageColor3 = Color3.fromRGB(163, 33, 38)
+	icon.ZIndex = 2
 
-	textLabel.Name = "TextLabel"
-	textLabel.Parent = pill
-	textLabel.BackgroundTransparency = 1
-	textLabel.Position = UDim2.new(0, 38, 0, 0)
-	textLabel.Size = UDim2.new(1, -46, 1, -4)
-	textLabel.Font = Enum.Font.Gotham
-	textLabel.Text = "Notification"
-	textLabel.TextColor3 = Color3.fromRGB(210, 210, 218)
-	textLabel.TextSize = 12
-	textLabel.TextWrapped = true
-	textLabel.TextXAlignment = Enum.TextXAlignment.Left
-	textLabel.TextYAlignment = Enum.TextYAlignment.Center
+	-- Close button (top-right X)
+	closeBtn.Name = "CloseBtn"
+	closeBtn.Parent = pill
+	closeBtn.AnchorPoint = Vector2.new(1, 0)
+	closeBtn.BackgroundTransparency = 1
+	closeBtn.Position = UDim2.new(1, -6, 0, 4)
+	closeBtn.Size = UDim2.new(0, 18, 0, 18)
+	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.Text = "×"
+	closeBtn.TextColor3 = Color3.fromRGB(90, 90, 105)
+	closeBtn.TextSize = 16
+	closeBtn.AutoButtonColor = false
+	closeBtn.ZIndex = 4
 
-	textPadding.Parent = textLabel
-	textPadding.PaddingRight = UDim.new(0, 6)
+	-- Title (bold, first line)
+	titleLbl.Name = "TitleLabel"
+	titleLbl.Parent = pill
+	titleLbl.BackgroundTransparency = 1
+	titleLbl.AnchorPoint = Vector2.new(0, 0)
+	titleLbl.Position = UDim2.new(0, 36, 0, 10)
+	titleLbl.Size = UDim2.new(1, -60, 0, 16)
+	titleLbl.Font = Enum.Font.GothamBold
+	titleLbl.Text = "Info"
+	titleLbl.TextColor3 = Color3.fromRGB(230, 230, 238)
+	titleLbl.TextSize = 13
+	titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+	titleLbl.TextTruncate = Enum.TextTruncate.AtEnd
+	titleLbl.ZIndex = 2
 
+	-- Body text (below title)
+	bodyLbl.Name = "TextLabel"
+	bodyLbl.Parent = pill
+	bodyLbl.BackgroundTransparency = 1
+	bodyLbl.AnchorPoint = Vector2.new(0, 0)
+	bodyLbl.Position = UDim2.new(0, 36, 0, 30)
+	bodyLbl.Size = UDim2.new(1, -44, 0, 26)
+	bodyLbl.Font = Enum.Font.Gotham
+	bodyLbl.Text = "Notification"
+	bodyLbl.TextColor3 = Color3.fromRGB(155, 155, 168)
+	bodyLbl.TextSize = 12
+	bodyLbl.TextWrapped = true
+	bodyLbl.TextXAlignment = Enum.TextXAlignment.Left
+	bodyLbl.TextYAlignment = Enum.TextYAlignment.Top
+	bodyLbl.ZIndex = 2
+
+	bodyPad.PaddingRight = UDim.new(0, 8)
+	bodyPad.Parent = bodyLbl
+
+	-- Progress bar at bottom
 	progressBar.Name = "ProgressBar"
 	progressBar.Parent = pill
 	progressBar.AnchorPoint = Vector2.new(0, 1)
-	progressBar.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+	progressBar.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
 	progressBar.BorderSizePixel = 0
 	progressBar.Position = UDim2.new(0, 0, 1, 0)
-	progressBar.Size = UDim2.new(1, 0, 0, 2)
+	progressBar.Size = UDim2.new(1, 0, 0, 3)
+	progressBar.ZIndex = 2
 
-	progressBarInner.Name = "ProgressBarInner"
-	progressBarInner.Parent = progressBar
-	progressBarInner.BackgroundColor3 = Color3.fromRGB(163, 33, 38)
-	progressBarInner.BorderSizePixel = 0
-	progressBarInner.Size = UDim2.new(1, 0, 1, 0)
+	progressFill.Name = "ProgressBarInner"
+	progressFill.Parent = progressBar
+	progressFill.BackgroundColor3 = Color3.fromRGB(163, 33, 38)
+	progressFill.BorderSizePixel = 0
+	progressFill.Size = UDim2.new(1, 0, 1, 0)
+	progressFill.ZIndex = 3
 
 	progressCorner.CornerRadius = UDim.new(1, 0)
-	progressCorner.Parent = progressBarInner
+	progressCorner.Parent = progressFill
 
-	-- Compat: old code accesses notification.Background.InnerBackground.ContentHolder.*
-	local innerBackground = Instance.new("Frame")
-	innerBackground.Name = "InnerBackground"
-	innerBackground.Parent = pill
-	innerBackground.BackgroundTransparency = 1
-	innerBackground.Size = UDim2.new(0,0,0,0)
-	local contentHolder = Instance.new("Frame")
-	contentHolder.Name = "ContentHolder"
-	contentHolder.Parent = innerBackground
-	contentHolder.BackgroundTransparency = 1
-	contentHolder.Size = UDim2.new(0,0,0,0)
+	-- Compat stubs
+	local innerBg = Instance.new("Frame")
+	innerBg.Name = "InnerBackground"
+	innerBg.BackgroundTransparency = 1
+	innerBg.Size = UDim2.new(0,0,0,0)
+	innerBg.Parent = pill
+	local ch = Instance.new("Frame")
+	ch.Name = "ContentHolder"
+	ch.BackgroundTransparency = 1
+	ch.Size = UDim2.new(0,0,0,0)
+	ch.Parent = innerBg
 
-	return notification
+	return root
 end
 
 local function updateNotificationPositions()
-	local currentY = 10
+	local topMargin = 10
+	local gap = 8
+	local currentY = topMargin
 	for i = 1, #activeNotifications do
 		local notif = activeNotifications[i]
-		if notif and notif.Instance.Parent then
-			TweenService:Create(notif.Instance, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-				{Position = UDim2.new(1, -290, 0, currentY)}):Play()
-			currentY = currentY + notif.Instance.AbsoluteSize.Y + 6
+		if notif and notif.Instance and notif.Instance.Parent then
+			TweenService:Create(notif.Instance,
+				TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+				{Position = UDim2.new(1, -310, 0, currentY)}):Play()
+			currentY = currentY + notif.Instance.AbsoluteSize.Y + gap
 		end
 	end
 end
@@ -3611,53 +3664,97 @@ function Library.Notification(message, notifType, duration)
 		notificationContainer = createNotificationContainer()
 	end
 
-	local notificationInstance = createNotification()
-	local pill = notificationInstance.Background
+	local inst = createNotification()
+	local pill = inst.Background
 
-	message  = message  or "Notification"
+	message   = message   or "Notification"
 	notifType = notifType or "info"
-	duration = duration or 4
+	duration  = duration  or 4
 
 	local typeConfigs = {
-		success = { icon="rbxassetid://11295279671", color=Color3.fromRGB(60, 200, 110) },
-		error   = { icon="rbxassetid://11295280827", color=Color3.fromRGB(220, 65, 55)  },
-		warning = { icon="rbxassetid://11295279671", color=Color3.fromRGB(230, 175, 45)  },
-		info    = { icon="rbxassetid://11454041890", color=Color3.fromRGB(163, 33, 38)   },
+		success = {
+			title = "Success",
+			icon  = "rbxassetid://11295279671",
+			color = Color3.fromRGB(60, 200, 110)
+		},
+		error = {
+			title = "Error",
+			icon  = "rbxassetid://11295280827",
+			color = Color3.fromRGB(220, 65, 55)
+		},
+		warning = {
+			title = "Warning",
+			icon  = "rbxassetid://11295279671",
+			color = Color3.fromRGB(230, 175, 45)
+		},
+		info = {
+			title = "Info",
+			icon  = "rbxassetid://11454041890",
+			color = Color3.fromRGB(163, 33, 38)
+		},
 	}
-	local config = typeConfigs[notifType:lower()] or typeConfigs.info
+	local cfg = typeConfigs[notifType:lower()] or typeConfigs.info
 
-	pill.AccentBar.BackgroundColor3 = config.color
-	pill.Icon.Image = config.icon
-	pill.Icon.ImageColor3 = config.color
-	pill.TextLabel.Text = message
-	pill.ProgressBar.ProgressBarInner.BackgroundColor3 = config.color
+	-- Apply colours and content
+	pill.AccentBar.BackgroundColor3               = cfg.color
+	pill.Icon.Image                               = cfg.icon
+	pill.Icon.ImageColor3                         = cfg.color
+	pill.TitleLabel.Text                          = cfg.title
+	pill.TitleLabel.TextColor3                    = cfg.color
+	pill.TextLabel.Text                           = message
+	pill.ProgressBar.ProgressBarInner.BackgroundColor3 = cfg.color
 
-	notification.Instance  = notificationInstance
-	notification.Duration  = duration
-	notification.Type      = notifType
+	-- Close button wires up after we create the notification object
+	notification.Instance = inst
+	notification.Duration = duration
+	notification.Type     = notifType
 
-	notificationInstance.Parent = notificationContainer
+	inst.Parent = notificationContainer
 	table.insert(activeNotifications, notification)
 
-	TweenService:Create(notificationInstance, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{Position = UDim2.new(1, -290, 0, 10)}):Play()
+	-- Hover: brighten close button
+	pill.CloseBtn.MouseEnter:Connect(function()
+		pill.CloseBtn.TextColor3 = Color3.fromRGB(220, 220, 230)
+	end)
+	pill.CloseBtn.MouseLeave:Connect(function()
+		pill.CloseBtn.TextColor3 = Color3.fromRGB(90, 90, 105)
+	end)
+	pill.CloseBtn.MouseButton1Click:Connect(function()
+		notification:Dismiss()
+	end)
+
+	-- Slide in from right
+	TweenService:Create(inst,
+		TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{Position = UDim2.new(1, -310, 0, 10)}):Play()
 
 	updateNotificationPositions()
 
-	local progressTween = TweenService:Create(pill.ProgressBar.ProgressBarInner,
-		TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)})
-	task.delay(0.35, function() progressTween:Play() end)
-	task.delay(duration, function() notification:Dismiss() end)
+	-- Progress bar drains over duration
+	local fill = pill.ProgressBar.ProgressBarInner
+	local progressTween = TweenService:Create(fill,
+		TweenInfo.new(duration, Enum.EasingStyle.Linear),
+		{Size = UDim2.new(0, 0, 1, 0)})
+	task.delay(0.4, function()
+		if fill and fill.Parent then progressTween:Play() end
+	end)
+
+	task.delay(duration, function()
+		notification:Dismiss()
+	end)
 
 	return notification
 end
 
 function notificationHandler:Dismiss()
-	TweenService:Create(self.Instance, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-		{Position = UDim2.new(1, 300, 0, self.Instance.Position.Y.Offset)}):Play()
-	task.delay(0.3, function()
-		for i, notif in ipairs(activeNotifications) do
-			if notif == self then
+	if not self.Instance or not self.Instance.Parent then return end
+	-- Slide out right
+	TweenService:Create(self.Instance,
+		TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+		{Position = UDim2.new(1, 320, 0, self.Instance.Position.Y.Offset)}):Play()
+	task.delay(0.32, function()
+		for i, n in ipairs(activeNotifications) do
+			if n == self then
 				table.remove(activeNotifications, i)
 				break
 			end
@@ -3666,6 +3763,7 @@ function notificationHandler:Dismiss()
 		updateNotificationPositions()
 	end)
 end
+
 
 _G.BSMTConfigData = _G.BSMTConfigData or {}
 _G.BSMTConfigElements = _G.BSMTConfigElements or {}
@@ -4346,6 +4444,38 @@ function windowHandler:ConfigTab()
         end)
     end
     
+    -- ── Live uptime label in UI Settings ─────────────────────────────────
+    configSection:Title("Session Info")
+    local uptimeLabel = configSection:Label("Loaded: 00:00")
+
+    -- Update uptime every second using a Heartbeat-based timer
+    do
+        local RunService = game:GetService("RunService")
+        local elapsed = 0
+        RunService.Heartbeat:Connect(function(dt)
+            elapsed += dt
+            if elapsed >= 1 then
+                elapsed = 0
+                local t = Library._scriptStartTime
+                if not t then return end
+                local secs = math.floor(tick() - t)
+                local h = math.floor(secs / 3600)
+                local m = math.floor((secs % 3600) / 60)
+                local s = secs % 60
+                local str
+                if h > 0 then
+                    str = string.format("Loaded: %d:%02d:%02d ago", h, m, s)
+                else
+                    str = string.format("Loaded: %02d:%02d ago", m, s)
+                end
+                -- Safely update the label text
+                pcall(function()
+                    uptimeLabel.Instance.LabelBackground.LabelText.Text = str
+                end)
+            end
+        end)
+    end
+
     return configTab
 end
 
@@ -4558,159 +4688,179 @@ _G.BSMTSettings = Library.Settings
 -- ║  Toggled via ConfigTab or Library.Watermark  ║
 -- ╚══════════════════════════════════════════════╝
 do
-    local RunService = game:GetService("RunService")
-    local Stats      = game:GetService("Stats")
+    local RunService  = game:GetService("RunService")
+    local Stats       = game:GetService("Stats")
+    local scriptStartTime = tick()
 
-    -- ── ScreenGui ──────────────────────────────────────────────────────────
-    local screenGui         = Instance.new("ScreenGui")
-    screenGui.Name          = "BSMTWatermark"
-    screenGui.ResetOnSpawn  = false
+    -- ── ScreenGui ────────────────────────────────────────────────────────
+    local screenGui          = Instance.new("ScreenGui")
+    screenGui.Name           = "BSMTWatermark"
+    screenGui.ResetOnSpawn   = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.DisplayOrder  = 999
+    screenGui.DisplayOrder   = 999
     screenGui.IgnoreGuiInset = true
 
-    -- ── Outer shell: dark pill with slight transparency ────────────────────
-    local shell             = Instance.new("Frame")
-    shell.Name              = "Shell"
-    shell.Parent            = screenGui
-    shell.AnchorPoint       = Vector2.new(0, 0)
-    shell.Position          = UDim2.new(0, 10, 0, 10)
-    shell.Size              = UDim2.new(0, 10, 0, 26)   -- width auto-expands via UIListLayout
-    shell.AutomaticSize     = Enum.AutomaticSize.X
-    shell.BackgroundColor3  = Color3.fromRGB(13, 13, 17)
-    shell.BackgroundTransparency = 0.15
-    shell.BorderSizePixel   = 0
-    shell.ClipsDescendants  = false
+    -- ── Pill container ───────────────────────────────────────────────────
+    local shell              = Instance.new("Frame")
+    shell.Name               = "Shell"
+    shell.Parent             = screenGui
+    shell.AnchorPoint        = Vector2.new(0, 0)
+    shell.Position           = UDim2.new(0, 10, 0, 10)
+    shell.Size               = UDim2.new(0, 10, 0, 28)
+    shell.AutomaticSize      = Enum.AutomaticSize.X
+    shell.BackgroundColor3   = Color3.fromRGB(13, 13, 17)
+    shell.BackgroundTransparency = 0.12
+    shell.BorderSizePixel    = 0
+    shell.ClipsDescendants   = false
 
-    local shellCorner       = Instance.new("UICorner")
-    shellCorner.CornerRadius = UDim.new(0, 6)
-    shellCorner.Parent      = shell
+    local shellCorner        = Instance.new("UICorner")
+    shellCorner.CornerRadius = UDim.new(0, 7)
+    shellCorner.Parent       = shell
 
-    local shellStroke       = Instance.new("UIStroke")
-    shellStroke.Color       = Color3.fromRGB(50, 50, 65)
-    shellStroke.Thickness   = 1
-    shellStroke.Transparency = 0.0
+    local shellStroke        = Instance.new("UIStroke")
+    shellStroke.Color        = Color3.fromRGB(48, 48, 62)
+    shellStroke.Thickness    = 1
     shellStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    shellStroke.Parent      = shell
+    shellStroke.Parent       = shell
 
-    -- ── Red left accent bar (sits OUTSIDE padding so it touches the edge) ──
-    local accentBar         = Instance.new("Frame")
-    accentBar.Name          = "AccentBar"
-    accentBar.Parent        = shell
-    accentBar.AnchorPoint   = Vector2.new(0, 0.5)
-    accentBar.Position      = UDim2.new(0, 0, 0.5, 0)
-    accentBar.Size          = UDim2.new(0, 3, 1, -2)
+    -- ── Red left accent bar ──────────────────────────────────────────────
+    local accentBar          = Instance.new("Frame")
+    accentBar.Name           = "AccentBar"
+    accentBar.Parent         = shell
+    accentBar.AnchorPoint    = Vector2.new(0, 0.5)
+    accentBar.Position       = UDim2.new(0, 0, 0.5, 0)
+    accentBar.Size           = UDim2.new(0, 3, 0.7, 0)
     accentBar.BackgroundColor3 = Color3.fromRGB(163, 33, 38)
-    accentBar.BorderSizePixel  = 0
-    accentBar.ZIndex        = 2
+    accentBar.BorderSizePixel = 0
+    accentBar.ZIndex         = 2
+    local accentCorner       = Instance.new("UICorner")
+    accentCorner.CornerRadius = UDim.new(0, 7)
+    accentCorner.Parent      = accentBar
 
-    local accentCorner      = Instance.new("UICorner")
-    accentCorner.CornerRadius = UDim.new(0, 6)
-    accentCorner.Parent     = accentBar
-
-    -- ── Horizontal layout for segments ────────────────────────────────────
-    local layout            = Instance.new("UIListLayout")
-    layout.Parent           = shell
-    layout.FillDirection    = Enum.FillDirection.Horizontal
+    -- ── Horizontal segment layout ────────────────────────────────────────
+    local layout             = Instance.new("UIListLayout")
+    layout.Parent            = shell
+    layout.FillDirection     = Enum.FillDirection.Horizontal
     layout.VerticalAlignment = Enum.VerticalAlignment.Center
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    layout.Padding          = UDim.new(0, 0)
-    layout.SortOrder        = Enum.SortOrder.LayoutOrder
+    layout.Padding           = UDim.new(0, 0)
+    layout.SortOrder         = Enum.SortOrder.LayoutOrder
 
-    local shellPadding      = Instance.new("UIPadding")
+    local shellPadding       = Instance.new("UIPadding")
     shellPadding.PaddingLeft  = UDim.new(0, 10)
     shellPadding.PaddingRight = UDim.new(0, 10)
-    shellPadding.Parent     = shell
+    shellPadding.Parent      = shell
 
-    -- Helper: create a text segment
-    local function makeSegment(text, color, order, bold)
-        local lbl           = Instance.new("TextLabel")
-        lbl.Name            = "Seg" .. order
-        lbl.Parent          = shell
+    -- Helpers
+    local MUTED = Color3.fromRGB(95, 97, 112)
+    local WHITE = Color3.fromRGB(225, 225, 232)
+
+    local function makeSeg(text, color, order, bold)
+        local lbl             = Instance.new("TextLabel")
+        lbl.Name              = "Seg" .. order
+        lbl.Parent            = shell
         lbl.BackgroundTransparency = 1
-        lbl.AutomaticSize   = Enum.AutomaticSize.X
-        lbl.Size            = UDim2.new(0, 0, 1, 0)
-        lbl.Font            = bold and Enum.Font.GothamBold or Enum.Font.Gotham
-        lbl.Text            = text
-        lbl.TextColor3      = color
-        lbl.TextSize        = 13
-        lbl.RichText        = false
-        lbl.LayoutOrder     = order
+        lbl.AutomaticSize    = Enum.AutomaticSize.X
+        lbl.Size             = UDim2.new(0, 0, 1, 0)
+        lbl.Font             = bold and Enum.Font.GothamBold or Enum.Font.Gotham
+        lbl.Text             = text
+        lbl.TextColor3       = color
+        lbl.TextSize         = 13
+        lbl.LayoutOrder      = order
         return lbl
     end
 
-    -- Divider helper
-    local function makeDivider(order)
-        local div           = Instance.new("TextLabel")
-        div.Name            = "Div" .. order
-        div.Parent          = shell
-        div.BackgroundTransparency = 1
-        div.Size            = UDim2.new(0, 18, 1, 0)
-        div.AutomaticSize   = Enum.AutomaticSize.None
-        div.Font            = Enum.Font.Gotham
-        div.Text            = "|"
-        div.TextColor3      = Color3.fromRGB(60, 62, 75)
-        div.TextSize        = 13
-        div.TextXAlignment  = Enum.TextXAlignment.Center
-        div.LayoutOrder     = order
-        return div
+    local function makeDiv(order)
+        local d              = Instance.new("TextLabel")
+        d.Name               = "Div" .. order
+        d.Parent             = shell
+        d.BackgroundTransparency = 1
+        d.Size               = UDim2.new(0, 14, 1, 0)
+        d.AutomaticSize      = Enum.AutomaticSize.None
+        d.Font               = Enum.Font.Gotham
+        d.Text               = "│"
+        d.TextColor3         = Color3.fromRGB(48, 50, 64)
+        d.TextSize           = 13
+        d.TextXAlignment     = Enum.TextXAlignment.Center
+        d.LayoutOrder        = order
+        return d
     end
 
-    -- ── Segments ───────────────────────────────────────────────────────────
-    local lblTitle  = makeSegment("BSMT",  Color3.fromRGB(255, 255, 255), 1,  true)
-    local _div1     = makeDivider(2)
-    local lblFps    = makeSegment("--",    Color3.fromRGB(255, 255, 255), 3,  true)
-    local lblFpsTxt = makeSegment(" fps",  Color3.fromRGB(100, 102, 115), 4,  false)
-    local _div2     = makeDivider(5)
-    local lblPing   = makeSegment("--",    Color3.fromRGB(255, 255, 255), 6,  true)
-    local lblPingTxt= makeSegment(" ms",   Color3.fromRGB(100, 102, 115), 7,  false)
+    -- Segments: BSMT | fps fps | ping ms | uptime
+    local lblTitle   = makeSeg("BSMT",  WHITE,  1, true)
+    local _d1        = makeDiv(2)
+    local lblFps     = makeSeg("--",    WHITE,  3, true)
+    local lblFpsTxt  = makeSeg(" fps",  MUTED,  4, false)
+    local _d2        = makeDiv(5)
+    local lblPing    = makeSeg("--",    WHITE,  6, true)
+    local lblPingTxt = makeSeg(" ms",   MUTED,  7, false)
+    local _d3        = makeDiv(8)
+    local lblUptime  = makeSeg("00:00", MUTED,  9, false)
 
-    -- ── FPS colour helper ──────────────────────────────────────────────────
-    local function fpsColor(fps)
-        if fps >= 55 then return Color3.fromRGB(80, 210, 120)   -- green
-        elseif fps >= 30 then return Color3.fromRGB(230, 190, 60) -- yellow
-        else return Color3.fromRGB(220, 60, 60) end              -- red
+    -- ── Colour helpers ───────────────────────────────────────────────────
+    local function fpsColor(v)
+        if v >= 55 then return Color3.fromRGB(72, 205, 110)
+        elseif v >= 30 then return Color3.fromRGB(225, 185, 50)
+        else return Color3.fromRGB(215, 60, 55) end
+    end
+    local function pingColor(v)
+        if v <= 80  then return Color3.fromRGB(72, 205, 110)
+        elseif v <= 150 then return Color3.fromRGB(225, 185, 50)
+        else return Color3.fromRGB(215, 60, 55) end
+    end
+    local function formatUptime(secs)
+        local s = math.floor(secs)
+        local h = math.floor(s / 3600)
+        local m = math.floor((s % 3600) / 60)
+        local sec = s % 60
+        if h > 0 then
+            return string.format("%d:%02d:%02d", h, m, sec)
+        else
+            return string.format("%02d:%02d", m, sec)
+        end
     end
 
-    local function pingColor(ping)
-        if ping <= 80  then return Color3.fromRGB(80, 210, 120)
-        elseif ping <= 150 then return Color3.fromRGB(230, 190, 60)
-        else return Color3.fromRGB(220, 60, 60) end
-    end
-
-    -- ── Update loop ────────────────────────────────────────────────────────
+    -- ── Update loop ──────────────────────────────────────────────────────
     local wmConn
-    local wmVisible = true
-    local frameCount = 0
-    local lastTime   = tick()
+    local wmVisible   = true
+    local frameCount  = 0
+    local lastFpsTime = tick()
+    local pingTimer   = 0
 
     local function updateWatermark(dt)
-        -- FPS: count frames over 0.5s window
-        frameCount += 1
         local now = tick()
-        if now - lastTime >= 0.5 then
-            local fps = math.round(frameCount / (now - lastTime))
-            frameCount = 0
-            lastTime   = now
+
+        -- FPS: frame-counted over 0.5s window
+        frameCount += 1
+        if now - lastFpsTime >= 0.5 then
+            local fps = math.round(frameCount / (now - lastFpsTime))
+            frameCount  = 0
+            lastFpsTime = now
             lblFps.Text       = tostring(fps)
             lblFps.TextColor3 = fpsColor(fps)
         end
 
-        -- Ping: read every frame (cheap)
-        local ok, ping = pcall(function()
-            return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-        end)
-        if ok then
-            lblPing.Text       = tostring(ping)
-            lblPing.TextColor3 = pingColor(ping)
+        -- Ping: every second
+        pingTimer += dt
+        if pingTimer >= 1 then
+            pingTimer = 0
+            local ok, ping = pcall(function()
+                return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            end)
+            if ok then
+                lblPing.Text       = tostring(ping)
+                lblPing.TextColor3 = pingColor(ping)
+            end
         end
+
+        -- Uptime: every second (piggyback ping timer already reset)
+        lblUptime.Text = formatUptime(now - scriptStartTime)
     end
 
     local function startWatermark()
         if wmConn then return end
         wmConn = RunService.Heartbeat:Connect(updateWatermark)
     end
-
     local function stopWatermark()
         if wmConn then wmConn:Disconnect() wmConn = nil end
     end
@@ -4722,11 +4872,9 @@ do
         if v then startWatermark() else stopWatermark() end
     end
 
-    -- Parent
-    local ok = pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
-    if not ok or not screenGui.Parent then
-        screenGui.Parent = player.PlayerGui
-    end
+    -- Parent to CoreGui (or fallback)
+    pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
+    if not screenGui.Parent then screenGui.Parent = player.PlayerGui end
 
     setWatermarkVisible(true)
 
@@ -4734,6 +4882,7 @@ do
         SetVisible = setWatermarkVisible,
         IsVisible  = function() return wmVisible end,
     }
+    Library._scriptStartTime = scriptStartTime
 
     _G.BSMTConfigElements["watermark_enabled"] = {
         Type  = "WatermarkToggle",
@@ -4741,7 +4890,6 @@ do
             setWatermarkVisible(value == true or value == nil)
         end,
     }
-
     if _G.BSMTConfigData["watermark_enabled"] ~= nil then
         setWatermarkVisible(_G.BSMTConfigData["watermark_enabled"])
     end
